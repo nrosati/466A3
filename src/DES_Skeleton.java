@@ -4,12 +4,18 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-
+import java.util.BitSet;
+import java.math.BigInteger;
+import java.security.SecureRandom;
+import java.util.Base64;
+import java.util.Base64.Encoder;
+import java.util.
 import gnu.getopt.Getopt;
 
 
 public class DES_Skeleton {
-
+	
+	
 	public static void main(String[] args) {
 		
 		StringBuilder inputFile = new StringBuilder();
@@ -84,9 +90,27 @@ public class DES_Skeleton {
 		return null;
 	}
 
-
+	/*
+	 * Generate DES key.  DES functional key is 56 bits.  Its a 64 bit key where the 8th bit in each byte is omitted.
+	 * I dont know how to do that so right now we're just getting 56 bits.  The spec does say its supposed to take a 
+	 * 64 bit key from a file on the command line so we will have to revist this.  Then we encode it in Base64.  
+	 * Only reason why we do that is because in the spec it says to use Base64 its useful encoding.  
+	 * Then we print in Hex because again thats what the spec says to do.  Not sure if the format is correct
+	 * for the hex printing cant test until the getopt stuff gets figured out.  Spec doesnt say anytning but Im pretty
+	 * sure the key is supposed to get written to the key file.  Also we may want to check to make sure we didnt generate
+	 * a weak key.  I think there is a list on wikipedia of keys that are considered weak.
+	 */
 	static void genDESkey(){
-		System.out.println("New key goes here");
+		//System.out.println("New key goes here");
+		SecureRandom random = new SecureRandom();  //Create RNG instance
+		
+		byte[] bytes = new byte[7];//Change to 8 to get 64 bit key
+		random.nextBytes(bytes);//Get 7 Random bytes = 56 bits
+		
+		String key = Base64.getEncoder().encodeToString(bytes);//Encode the Key
+		System.out.println(String.format("0x08x", key));//Print as hex
+		
+		//keyChainFile.append(key); write to file?
 		return;
 	}
 
@@ -141,7 +165,7 @@ public class DES_Skeleton {
 	
 	private static void callUseage(int exitStatus) {
 		
-		String useage = "";
+		String useage = "Improper command:  o i e d k h are supported options";
 		
 		System.err.println(useage);
 		System.exit(exitStatus);
