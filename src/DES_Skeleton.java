@@ -10,7 +10,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Base64.Encoder;
-import java.util.
+
 import gnu.getopt.Getopt;
 
 
@@ -73,7 +73,7 @@ public class DES_Skeleton {
 			
 			String encryptedText;
 			for (String line : Files.readAllLines(Paths.get(inputFile.toString()), Charset.defaultCharset())) {
-				encryptedText = DES_encrypt(line);
+				encryptedText = DES_encrypt(line, keyStr);
 				writer.print(encryptedText);
 			}
 		} catch (IOException e) {
@@ -86,7 +86,9 @@ public class DES_Skeleton {
 	 * TODO: You need to write the DES encryption here.
 	 * @param line
 	 */
-	private static String DES_encrypt(String line) {
+	private static String DES_encrypt(String line,StringBuilder keyChain) {
+		String key = keyChain.toString();
+		byte[] bytes = key.getBytes("UTF-8");
 		
 		return null;
 	}
