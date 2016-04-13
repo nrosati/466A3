@@ -88,27 +88,33 @@ public class DES_Skeleton {
 	 * @param line
 	 */
 	private static String DES_encrypt(String line,StringBuilder keyChain) {
-		String key = keyChain.toString();
+		String key = "";
 		try {
-			byte[] bytes = key.getBytes("UTF-8");
-		} catch (UnsupportedEncodingException e) {
+			for(String input : Files.readAllLines(Paths.get(keyChain.toString()), Charset.defaultCharset()))
+			{
+			key = input;
+			}
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		System.out.println(key);
+		byte[] bytes = key.getBytes();
 		
 		return null;
 	}
 
 	/*
-	 * Generates a 56 bit key, checks it against list of weak keys from wikipedia, if it is a match calls itself
+	 * Generates a 64 bit key, checks it against list of weak keys from wikipedia, if it is a match calls itself
 	 * if not prints the key in hexadecimal.
 	 */
+	@SuppressWarnings("static-access")
 	static void genDESkey(){
 		
 		SecureRandom random = new SecureRandom();  //Create RNG instance
 		
-		byte[] bytes = new byte[7];//Change to 8 to get 64 bit key
-		random.nextBytes(bytes);//Get 7 Random bytes = 56 bits
+		byte[] bytes = new byte[6];//Change to 5 to get 56 bit key
+		random.nextBytes(bytes);//Get 8 Random bytes = 64 bits
 		byte[] weak1 = {(byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01};
 		byte[] weak2 = {(byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE};
 		byte[] weak3 = {(byte)0xE0, (byte)0xE0, (byte)0xE0, (byte)0xE0, (byte)0xF1, (byte)0xF1, (byte)0xF1, (byte)0xF1};
@@ -127,7 +133,7 @@ public class DES_Skeleton {
 		else
 		{
 			String key = Base64.getEncoder().encodeToString(bytes);//Encode the Key
-			System.out.println(key.format("%02x", new BigInteger(1, key.getBytes())));//Print as hex
+			System.out.println(key.format("%x", new BigInteger(1, key.getBytes())));
 		}
 		
 		return;
