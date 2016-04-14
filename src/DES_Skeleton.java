@@ -1,4 +1,5 @@
 import java.io.IOException;
+
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
@@ -98,8 +99,13 @@ public class DES_Skeleton {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		key = key.substring(0, 16);
 		System.out.println(key);
-		byte[] bytes = key.getBytes();
+		String binary = new BigInteger(key,16).toString(2);
+		System.out.println(binary);
+		System.out.println(binary.length());
+		BitSet keyBytes = new BitSet();
+		keyBytes = keyBytes.valueOf(binary.getBytes());
 		
 		return null;
 	}
@@ -113,7 +119,7 @@ public class DES_Skeleton {
 		
 		SecureRandom random = new SecureRandom();  //Create RNG instance
 		
-		byte[] bytes = new byte[6];//Change to 5 to get 56 bit key
+		byte[] bytes = new byte[7];//Change to 6 to get 56 bit key
 		random.nextBytes(bytes);//Get 8 Random bytes = 64 bits
 		byte[] weak1 = {(byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01};
 		byte[] weak2 = {(byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE};
