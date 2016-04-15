@@ -101,13 +101,31 @@ public class DES_Skeleton {
 		}
 		key = key.substring(0, 16);
 		System.out.println(key);
-		String binary = new BigInteger(key,16).toString(2);
-		System.out.println(binary);
-		System.out.println(binary.length());
-		BitSet keyBytes = new BitSet();
-		keyBytes = keyBytes.valueOf(binary.getBytes());
-		
+		BigInteger binary = new BigInteger(key,16);
+		//System.out.println(binary);
+		//System.out.println(binary.length());
+		//keyBytes = binary.toByteArray();
+		int length = binary.bitLength() + 3;
+		BitSet keyBytes = new BitSet(length);
+		for(int i = 0; i < length; i++)
+		{
+			keyBytes.set(i, binary.testBit(length - i - 1));
+		}
+		printBitSet(keyBytes, length);
 		return null;
+	
+	}
+	private static void printBitSet(BitSet set, int length)
+	{
+		int length1 = length;
+		for(int i = 0; i < length1; i++)
+		{
+			if(set.get(i))
+				System.out.print("1");
+			else
+				System.out.print("0");
+		}
+		System.out.println();
 	}
 
 	/*
