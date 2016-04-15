@@ -58,7 +58,7 @@ public class RSA_skeleton {
 		/*
 		 * http://www.urbanophile.com/arenn/hacking/getopt/gnu.getopt.Getopt.html
 		*/	
-		Getopt g = new Getopt("Chat Program", args, "hke:d:i:");
+		Getopt g = new Getopt("Chat Program", args, "hke:d:i:b:");
 		int c;
 		String arg;
 		while ((c = g.getopt()) != -1){
@@ -94,7 +94,7 @@ public class RSA_skeleton {
 	}
 	
 	private static void callUsage(int exitStatus) {
-
+    
 		String useage = "";
 		
 		System.err.println(useage);
