@@ -46,6 +46,11 @@ public class RSA_skeleton {
 	}
 	
 	private static void genRSAkey(StringBuilder bitSizeStr) {
+		private BigInteger privateKey;
+   		private BigInteger publicKey;
+   		private BigInteger p;
+   		private BigInteger q;
+   		
 		if(bitSizeStr.toString().equals(""){
 			bitSizeStr.append("1024")
 			}
