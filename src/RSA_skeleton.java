@@ -106,7 +106,10 @@ public class RSA_skeleton {
 	
 	private static void callUsage(int exitStatus) {
     
-		String useage = "";
+		String useage = "-h:				display this message\n" + 
+		"-k -b <bit_size>:				generate a public/private key pair printed to std out\n" +
+		"-e <key_chain_file> -i <plaintext>:		encrypt the plaintext value with the public key\n"
+		+"-d <key_chain_file> -i <ciphertext_value>:	decrypt the cipher text value back to plaintext\n";
 		
 		System.err.println(useage);
 		System.exit(exitStatus);
