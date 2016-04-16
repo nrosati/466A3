@@ -2,7 +2,9 @@ import gnu.getopt.Getopt;
 
 
 public class RSA_skeleton {
-
+	private BigInteger privateKey;
+   	private BigInteger publicKey;
+   	
 	public static void main(String[] args){
 		
 		StringBuilder bitSizeStr = new StringBuilder();
@@ -46,8 +48,6 @@ public class RSA_skeleton {
 	}
 	
 	private static void genRSAkey(StringBuilder bitSizeStr) {
-		private BigInteger privateKey;
-   		private BigInteger publicKey;
    		private BigInteger p;
    		private BigInteger q;
    		
