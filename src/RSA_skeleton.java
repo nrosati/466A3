@@ -46,7 +46,13 @@ public class RSA_skeleton {
 	}
 	
 	private static void genRSAkey(StringBuilder bitSizeStr) {
-		// TODO Auto-generated method stub
+		if(bitSizeStr.toString().equals(""){
+			bitSizeStr.append("1024")
+			}
+		else {
+			//still to set up other case
+			
+		}// TODO Auto-generated method stub
 	}
 
 
