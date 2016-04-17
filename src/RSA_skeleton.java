@@ -1,3 +1,6 @@
+import java.math.BigInteger;
+import java.util.Random;
+
 import gnu.getopt.Getopt;
 
 
@@ -48,16 +51,43 @@ public class RSA_skeleton {
 	}
 	
 	private static void genRSAkey(StringBuilder bitSizeStr) {
-   		private BigInteger p;
-   		private BigInteger q;
+   		BigInteger p;
+   		BigInteger q;
+   		BigInteger phi;
+   		int bitLength;
+   		BigInteger e; 
+   		BigInteger n; 
+   		BigInteger d; 
+   		Random rnd = new Random(); //random for big integer
    		
-		if(bitSizeStr.toString().equals(""){
-			bitSizeStr.append("1024")
+		if(bitSizeStr.toString().equals("")){
+			bitSizeStr.append("1024");
+			bitLength = 1024;
 			}
 		else {
-			//still to set up other case
-			
-		}// TODO Auto-generated method stub
+			bitLength = Integer.parseInt(bitSizeStr.toString());
+		}
+		
+		
+		p = BigInteger.probablePrime(bitLength/2, rnd);
+		q = BigInteger.probablePrime(bitLength/2, rnd);
+		n = p.multiply(q);
+		
+		phi = p.subtract(new BigInteger("1")).multiply(q.subtract(new BigInteger("1"))); 
+			//computing phi with big integer arithmatic 
+		e = BigInteger.probablePrime(64, rnd); 
+			//create a random e
+		
+		//now compute e^-1 mod phi
+		d = e.modInverse(phi);
+		
+		//now to print out both key pairs
+		String hexValue = e.toString(16); 
+		String hexnValue = n.toString(16); 
+		System.out.println("public key "+hexValue + " " +hexnValue +"\n");
+		hexValue = d.toString(16); 
+		hexnValue = n.toString(16); 
+		System.out.println("private key "+hexValue + " " +hexnValue +"\n");
 	}
 
 
