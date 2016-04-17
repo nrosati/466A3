@@ -17,6 +17,7 @@ import java.util.Base64.Encoder;
 import gnu.getopt.Getopt;
 
 
+@SuppressWarnings("unused")
 public class DES_Skeleton {
 	
 	
@@ -49,7 +50,7 @@ public class DES_Skeleton {
 			String encryptedText;
 			
 			for (String line : lines) {
-				encryptedText = DES_decrypt(IVStr, line);
+				encryptedText = DES_decrypt(IVStr, line, keyChainFile);
 				writer.print(encryptedText);
 			}
 		} catch (IOException e) {
@@ -62,9 +63,163 @@ public class DES_Skeleton {
 	 * TODO: You need to write the DES encryption here.
 	 * @param line
 	 */
-	private static String DES_decrypt(String iVStr, String line) {
+	@SuppressWarnings("static-access")
+	private static String DES_decrypt(String iVStr, String line, StringBuilder keyStr) {
 		
-		return null;
+		String key = "";
+		try {
+			for(String input : Files.readAllLines(Paths.get(keyStr.toString()), Charset.defaultCharset()))
+			{
+			key = input;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		key = key.substring(0, 16);
+		System.out.println(key);
+		BigInteger binary = new BigInteger(key,16);
+		//System.out.println(binary);
+		//System.out.println(binary.length());
+		//keyBytes = binary.toByteArray();
+		int length = binary.bitLength() + 3;
+		BitSet keyBytes = new BitSet(length);//Maybe be 64?
+		for(int i = 0; i < length; i++)
+		{
+			keyBytes.set(i, binary.testBit(length - i - 1));
+		}
+		//printBitSet(keyBytes, length);
+		
+		//Trim key down from 64 to 56 bits
+		BitSet shortKey = new BitSet(56);
+		for(int i = 0; i < 56; i++)
+		{
+			shortKey.set(i, keyBytes.get(SBoxes.PC1[i]));
+		}
+		
+		//Split 56 bit key into 2 28 bit keys
+		BitSet c = new BitSet(28);
+		BitSet d = new BitSet(28);
+		
+		for(int i = 0; i < 56; i++)
+		{
+			if(i < 28)
+			{
+				c.set(i, shortKey.get(i));
+			}
+			else
+				d.set(i, shortKey.get(i));
+		}
+		//Generate the 16 key blocks
+		BitSet[] cblocks = new BitSet[16];
+		BitSet[] dblocks = new BitSet[16];
+		
+		cblocks[0] = new BitSet(28);
+		dblocks[0] = new BitSet(28);
+		for(int i = 0; i < 28; i++)
+		{
+			cblocks[0].set(i, c.get(i));
+			dblocks[0].set(i, d.get(i));
+		}
+		for(int i = 1; i < 16; i++)
+		{
+			BigInteger tempc = new BigInteger(cblocks[i - 1].toByteArray()).shiftLeft(SBoxes.rotations[i]);
+			BigInteger tempd = new BigInteger(dblocks[i-1].toByteArray()).shiftLeft(SBoxes.rotations[i]);
+			
+			for(int j = 0; i < 28; j++)
+			{
+				cblocks[i].set(j, tempc.testBit(j));
+				dblocks[i].set(j, tempd.testBit(j));
+			}
+	
+		}
+		
+		//Combine C and D keys
+		BitSet[] finalKeys = new BitSet[16];
+		for(int i = 0; i < 56; i ++)
+		{
+			finalKeys[i] = new BitSet(56);
+			for(int j = 0; j < 56; j++)
+			{
+				if(j < 28)
+				{
+					finalKeys[i].set(j, cblocks[i].get(j));
+				}
+				else
+				{
+					finalKeys[i].set(j, dblocks[i].get(j));
+				}
+				
+			}
+			
+		}
+		BitSet IV = new BitSet();
+		IV.valueOf(iVStr.getBytes());
+		
+		BitSet message = new BitSet();
+		message.valueOf(line.getBytes());
+		message.xor(IV);
+		
+		//Initial Permutation
+				BitSet ip = new BitSet(64);
+				for(int i = 0; i < 58; i++)
+				{
+					ip.set(i, SBoxes.IP[i]);
+				}
+				
+				BitSet L0 = new BitSet(32);
+				BitSet R0 = new BitSet(32);
+				
+				for(int i = 0; i < 64; i++)
+				{
+					if(i < 32)
+					{
+						L0.set(i, ip.get(i));
+					}
+					else
+					{
+						R0.set(i, ip.get(i));
+					}
+				}
+				
+				BitSet[] Ln = new BitSet[16];
+				BitSet[] Rn = new BitSet[16];
+				Ln[0] = L0;
+				Rn[0] = R0;
+				for(int i = 1; i < 17; i++)
+				{
+					Ln[i] = new BitSet(32);
+					Rn[i] = new BitSet(32);
+					
+					Ln[i] = Rn[i-1];
+					BitSet f = F(Rn[i-1], finalKeys[17 -i]);// Decrypt we reverse the order of the keys
+					BitSet temp = new BitSet(32);
+					temp = Ln[i-1];
+					temp.xor(f);
+					Rn[i] = (temp);
+				}
+				// Reverse Blocks
+				BitSet reversed = new BitSet(64);
+				
+				for(int i = 0; i < 64; i++)
+				{
+					if(i < 32)
+					{
+						reversed.set(i,Rn[16].get(i));
+					}
+					else
+					{
+						reversed.set(i, Ln[16].get(i));;
+					}
+				}
+				
+				BitSet finalOutput = new BitSet(64);
+				for(int i = 0; i < 64; i++)
+				{
+					finalOutput.set(i, reversed.get(SBoxes.FP[i]));
+				}
+		
+		return finalOutput.toString();
 	}
 
 
@@ -89,6 +244,7 @@ public class DES_Skeleton {
 	 * TODO: You need to write the DES encryption here.
 	 * @param line
 	 */
+	@SuppressWarnings("static-access")
 	private static String DES_encrypt(String line,StringBuilder keyChain) {
 		String key = "";
 		try {
@@ -180,6 +336,16 @@ public class DES_Skeleton {
 		
 		BitSet message = new BitSet();
 		message.valueOf(line.getBytes());
+		//IV Vector for cbc mode 
+		
+		BitSet IV = new BitSet(64);
+		
+		SecureRandom random = new SecureRandom();
+		byte[] rand = new byte[7];
+		random.nextBytes(rand);
+		IV.valueOf(rand);
+		String iVec = IV.toString();
+		message.xor(IV);
 		
 		//Initial Permutation
 		BitSet ip = new BitSet(64);
@@ -240,8 +406,13 @@ public class DES_Skeleton {
 			finalOutput.set(i, reversed.get(SBoxes.FP[i]));
 		}
 		
+		String out = finalOutput.toString();
 		
-		return finalOutput.toString();
+		iVec.concat(out);
+		iVec.concat(" ");
+		out = iVec;
+		
+		return out;
 	
 	}
 	
@@ -303,7 +474,7 @@ public class DES_Skeleton {
 		}
 		return SOUTFINALLY;
 	}
-	private static void printBitSet(BitSet set, int length)
+	/*private static void printBitSet(BitSet set, int length)
 	{
 		int length1 = length;
 		for(int i = 0; i < length1; i++)
@@ -314,7 +485,7 @@ public class DES_Skeleton {
 				System.out.print("0");
 		}
 		System.out.println();
-	}
+	}*/
 
 	/*
 	 * Generates a 64 bit key, checks it against list of weak keys from wikipedia, if it is a match calls itself
