@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 
+
 import gnu.getopt.Getopt;
 
 
@@ -106,12 +107,76 @@ public class DES_Skeleton {
 		//System.out.println(binary.length());
 		//keyBytes = binary.toByteArray();
 		int length = binary.bitLength() + 3;
-		BitSet keyBytes = new BitSet(length);
+		BitSet keyBytes = new BitSet(length);//Maybe be 64?
 		for(int i = 0; i < length; i++)
 		{
 			keyBytes.set(i, binary.testBit(length - i - 1));
 		}
-		printBitSet(keyBytes, length);
+		//printBitSet(keyBytes, length);
+		
+		//Trim key down from 64 to 56 bits
+		BitSet shortKey = new BitSet(56);
+		for(int i = 0; i < 56; i++)
+		{
+			shortKey.set(i, keyBytes.get(SBoxes.PC1[i]));
+		}
+		
+		//Split 56 bit key into 2 28 bit keys
+		BitSet c = new BitSet(28);
+		BitSet d = new BitSet(28);
+		
+		for(int i = 0; i < 56; i++)
+		{
+			if(i < 28)
+			{
+				c.set(i, shortKey.get(i));
+			}
+			else
+				d.set(i, shortKey.get(i));
+		}
+		//Generate the 16 key blocks
+		BitSet[] cblocks = new BitSet[16];
+		BitSet[] dblocks = new BitSet[16];
+		
+		cblocks[0] = new BitSet(28);
+		dblocks[0] = new BitSet(28);
+		for(int i = 0; i < 28; i++)
+		{
+			cblocks[0].set(i, c.get(i));
+			dblocks[0].set(i, d.get(i));
+		}
+		for(int i = 1; i < 16; i++)
+		{
+			BigInteger tempc = new BigInteger(cblocks[i - 1].toByteArray()).shiftLeft(SBoxes.rotations[i]);
+			BigInteger tempd = new BigInteger(dblocks[i-1].toByteArray()).shiftLeft(SBoxes.rotations[i]);
+			
+			for(int j = 0; i < 28; j++)
+			{
+				cblocks[i].set(j, tempc.testBit(j));
+				dblocks[i].set(j, tempd.testBit(j));
+			}
+	
+		}
+		
+		//Combine C and D keys
+		BitSet[] finalKeys = new BitSet[16];
+		for(int i = 0; i < 56; i ++)
+		{
+			finalKeys[i] = new BitSet(56);
+			for(int j = 0; j < 56; j++)
+			{
+				if(j < 28)
+				{
+					finalKeys[i].set(j, cblocks[i].get(j));
+				}
+				else
+				{
+					finalKeys[i].set(j, dblocks[i].get(j));
+				}
+				
+			}
+			
+		}
 		return null;
 	
 	}
