@@ -177,8 +177,131 @@ public class DES_Skeleton {
 			}
 			
 		}
-		return null;
+		
+		BitSet message = new BitSet();
+		message.valueOf(line.getBytes());
+		
+		//Initial Permutation
+		BitSet ip = new BitSet(64);
+		for(int i = 0; i < 58; i++)
+		{
+			ip.set(i, SBoxes.IP[i]);
+		}
+		
+		BitSet L0 = new BitSet(32);
+		BitSet R0 = new BitSet(32);
+		
+		for(int i = 0; i < 64; i++)
+		{
+			if(i < 32)
+			{
+				L0.set(i, ip.get(i));
+			}
+			else
+			{
+				R0.set(i, ip.get(i));
+			}
+		}
+		
+		BitSet[] Ln = new BitSet[16];
+		BitSet[] Rn = new BitSet[16];
+		Ln[0] = L0;
+		Rn[0] = R0;
+		for(int i = 1; i < 17; i++)
+		{
+			Ln[i] = new BitSet(32);
+			Rn[i] = new BitSet(32);
+			
+			Ln[i] = Rn[i-1];
+			BitSet f = F(Rn[i-1], finalKeys[i -1]);// k-1 since finalkeys is 0 based
+			BitSet temp = new BitSet(32);
+			temp = Ln[i-1];
+			temp.xor(f);
+			Rn[i] = (temp);
+		}
+		// Reverse Blocks
+		BitSet reversed = new BitSet(64);
+		
+		for(int i = 0; i < 64; i++)
+		{
+			if(i < 32)
+			{
+				reversed.set(i,Rn[16].get(i));
+			}
+			else
+			{
+				reversed.set(i, Ln[16].get(i));;
+			}
+		}
+		
+		BitSet finalOutput = new BitSet(64);
+		for(int i = 0; i < 64; i++)
+		{
+			finalOutput.set(i, reversed.get(SBoxes.FP[i]));
+		}
+		
+		
+		return finalOutput.toString();
 	
+	}
+	
+	/*
+	 * F Function, Ebit, Sboxes
+	 */
+	private static BitSet F (BitSet right, BitSet key)
+	{
+		BitSet E = new BitSet(48);
+		for(int i = 0; i < 32; i++)
+		{
+			E.set(i, right.get(SBoxes.E[i]));
+		}
+		
+		BitSet temp = new BitSet(48);
+		temp = right;
+		temp.xor(key);
+		
+		BitSet[] blocks = new BitSet[8];
+		
+		int count = 0;
+		for(int i = 0; i < 48; i++)
+		{
+			blocks[i] = new BitSet(6);
+			
+			for(int j = 0; j < 6; j++)
+			{
+				blocks[i].set(j, temp.get(count));
+				count++;
+			}
+		}
+		
+		BitSet sOut = new BitSet(32);
+		int place = 0;
+		for(int i = 0; i < 8; i++)
+		{
+			byte[] bytes = blocks[i].toByteArray();
+			byte[] first =  {bytes[0], bytes[5]};
+			byte[] middle = {bytes[1], bytes[2], bytes[3], bytes[4]};
+			BigInteger rowBi = new BigInteger(first);
+			BigInteger colBi = new BigInteger(middle);
+			int row = rowBi.intValue();
+			int col = colBi.intValue();
+			
+			//BitSet Sout = new BitSet(32);
+			long soutint = SBoxes.S[i][(row * 15) + col];
+			BigInteger bis = BigInteger.valueOf(soutint);
+			for(int j = 0; j < 4; j++)
+			{
+				sOut.set(place, bis.testBit(j));
+				place++;
+			}
+			
+		}
+		BitSet SOUTFINALLY = new BitSet(32);
+		for(int i = 0; i < 32; i++)
+		{
+			SOUTFINALLY.set(i, sOut.get(SBoxes.P[i]));
+		}
+		return SOUTFINALLY;
 	}
 	private static void printBitSet(BitSet set, int length)
 	{
