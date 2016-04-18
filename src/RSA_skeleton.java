@@ -5,8 +5,8 @@ import gnu.getopt.Getopt;
 
 
 public class RSA_skeleton {
-	private BigInteger privateKey;
-   	private BigInteger publicKey;
+	private static BigInteger privateKey;
+   	private static BigInteger publicKey;
    	
 	public static void main(String[] args){
 		
@@ -42,12 +42,37 @@ public class RSA_skeleton {
 
 
 	private static void RSAencrypt(StringBuilder m, StringBuilder nStr, StringBuilder eStr) {
-		// TODO Auto-generated method stub
+		//following the formula and using the values as big ints
+		
+		BigInteger n = new BigInteger(nStr.toString()); 
+		BigInteger plaintext = new BigInteger(m.toString()); 
+		BigInteger e = new BigInteger(eStr.toString()); 
+		BigInteger cipher; 
+		
+		StringBuilder ciphertext =  new StringBuilder();
+		
+		cipher = plaintext.modPow(e, n); 
+		
+		ciphertext.append(cipher.toString());
+		
+		m = ciphertext; 
+		
 	}
 
 	private static void RSAdecrypt(StringBuilder cStr, StringBuilder nStr,
 			StringBuilder dStr){
-		// TODO Auto-generated method stub
+		BigInteger n = new BigInteger(nStr.toString()); 
+		BigInteger c = new BigInteger(cStr.toString()); 
+		BigInteger d = new BigInteger(dStr.toString()); 
+		BigInteger plaintext; 
+		
+		StringBuilder ciphertext =  new StringBuilder();
+		
+		plaintext = c.modPow(d, n); 
+		
+		ciphertext.append(plaintext.toString());
+		
+		cStr = ciphertext; 
 	}
 	
 	private static void genRSAkey(StringBuilder bitSizeStr) {
@@ -72,22 +97,24 @@ public class RSA_skeleton {
 		p = BigInteger.probablePrime(bitLength/2, rnd);
 		q = BigInteger.probablePrime(bitLength/2, rnd);
 		n = p.multiply(q);
-		
+ 
 		phi = p.subtract(new BigInteger("1")).multiply(q.subtract(new BigInteger("1"))); 
 			//computing phi with big integer arithmatic 
-		e = BigInteger.probablePrime(64, rnd); 
+		e = BigInteger.probablePrime(16, rnd); 
 			//create a random e
 		
 		//now compute e^-1 mod phi
 		d = e.modInverse(phi);
 		
+		privateKey = d; 
+		
 		//now to print out both key pairs
 		String hexValue = e.toString(16); 
 		String hexnValue = n.toString(16); 
-		System.out.println("public key "+hexValue + " " +hexnValue +"\n");
+		System.out.println("public key e"+hexValue + " and n" +hexnValue +"\n");
 		hexValue = d.toString(16); 
 		hexnValue = n.toString(16); 
-		System.out.println("private key "+hexValue + " " +hexnValue +"\n");
+		System.out.println("private key d"+hexValue + " n" +hexnValue +"\n");
 	}
 
 
