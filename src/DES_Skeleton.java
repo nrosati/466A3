@@ -76,7 +76,7 @@ public class DES_Skeleton {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		key = key.substring(0, 16);
+		key = key.substring(key.length()-16, key.length());
 		System.out.println(key);
 		BigInteger binary = new BigInteger(key,16);
 		//System.out.println(binary);
@@ -256,7 +256,7 @@ public class DES_Skeleton {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		key = key.substring(0, 16);
+		key = key.substring(key.length()-16, key.length());
 		System.out.println(key);
 		BigInteger binary = new BigInteger(key,16);
 		//System.out.println(binary);
