@@ -128,6 +128,13 @@ public class DES_Skeleton {
 			printBitSet(finalKeys[i], 6);
 		}
 		
+		BigInteger lineIn = new BigInteger(line);
+		BitSet message = new BitSet();
+		for(int i = 0; i < 64; i++)
+		{
+			message.set(i, lineIn.testBit(64 -i -1));
+		}
+		
 		return null;
 	
 	}
