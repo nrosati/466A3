@@ -105,7 +105,7 @@ public class DES_Skeleton {
 			e.printStackTrace();
 		}
 		key = key.substring(key.length()-16, key.length());
-		System.out.println(key);
+		//System.out.println(key);
 		BigInteger binary = new BigInteger(key,16);
 	
 		int length = binary.bitLength();
@@ -122,20 +122,24 @@ public class DES_Skeleton {
 		//System.out.println(keyBytes.size());
 		//printBitSet(keyBytes, 8);
 		
-		keyBytes = expandKey(keyBytes);
+		BitSet[] finalKeys = expandKey(keyBytes);
+		for(int i = 0; i < 16; i++)
+		{
+			printBitSet(finalKeys[i], 6);
+		}
 		
 		return null;
 	
 	}
 	
-	private static BitSet expandKey(BitSet keyBytes)
+	private static BitSet[] expandKey(BitSet keyBytes)
 	{
 		BitSet shortKey = new BitSet(56);
 		for(int i = 0; i < 56; i++)
 		{
 			shortKey.set(i, keyBytes.get(SBoxes.PC1[i] -1));
 		}
-		System.out.println(shortKey.length());
+		//System.out.println(shortKey.length());
 		//printBitSet(shortKey, 7);
 		
 		BitSet[] C = new BitSet[17];
@@ -153,33 +157,84 @@ public class DES_Skeleton {
 			else
 				D[0].set(i - 28, shortKey.get(i));
 		}
-		printBitSet(C[0], 7);
-		printBitSet(D[0], 7);
+		//printBitSet(C[0], 7);
+		//printBitSet(D[0], 7);
 
 		for(int i = 1; i < 17; i++)
 		{
-			leftShift(C[i-1], SBoxes.rotations[i]);
-			leftShift(D[i-1], SBoxes.rotations[i]);
+			C[i] = leftShift(C[i-1], SBoxes.rotations[i - 1]);
+			/*System.out.print("C ");
+			System.out.print(i);
+			System.out.print(" = ");
+			printBitSet(C[i], 28);*/
+			D[i] = leftShift(D[i-1], SBoxes.rotations[i -1]);
+			/*System.out.print("D ");
+			System.out.print(i);
+			System.out.print(" = ");
+			printBitSet(D[i], 28);*/
 		}
 		
+		BitSet[] Kn = new BitSet[16];
+		for(int i = 0; i < 16; i++)
+		{
+			Kn[i] = new BitSet(64);
+		}
 		
+		for(int i = 0; i < 16; i++)
+		{
+			for(int j = 0; j < 56; j++)
+			{
+				if(j < 28)
+				{
+					Kn[i].set(j, C[i+1].get(j));
+				}
+				else
+					Kn[i].set(j, D[i+1].get(j - 28));
+			}
+		}
 		
-		return shortKey;
+		/*for(int i = 0; i < 16; i++)
+		{
+			System.out.print("Kn " + i + " = ");
+			printBitSet(Kn[i], 56);
+		}*/
+		
+		BitSet[] finalKeys = new BitSet[16];
+		for(int i = 0; i < 16; i++)
+		{
+			finalKeys[i] = new BitSet();
+			for(int j = 0; j < 48; j++)
+			{
+				finalKeys[i].set(j, Kn[i].get(SBoxes.PC2[j] -1));
+			}
+		}
+		
+		/*for(int i = 0; i < 16; i++)
+		{
+			System.out.print("Kn " + (i) +  " = ");
+			printBitSet(finalKeys[i], 6);
+		}*/
+		
+		return finalKeys;
 		
 	}
 	
 	private static BitSet leftShift(BitSet set, int shifts)
 	{
 		BitSet shifted = new BitSet();
-		for(int i = 0; i < shifts; i++)
+		boolean bit = set.get(0);
+		//System.out.println(bit);
+		shifted = set.get(1, set.length());
+		shifted.set(27, bit);
+		if(shifts == 2)
 		{
-			boolean bit = set.get(0);
-			System.out.println(bit);
-			shifted = set.get(1, set.length());
+			bit = shifted.get(0);
+			shifted = shifted.get(1, shifted.length());
 			shifted.set(27, bit);
 		}
 		
-		printBitSet(shifted, 28);
+		
+		//printBitSet(shifted, 28);
 		return shifted;
 	}
 	
