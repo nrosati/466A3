@@ -104,6 +104,8 @@ public class DES_Skeleton {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		
 		key = key.substring(key.length()-16, key.length());
 		//System.out.println(key);
 		BigInteger binary = new BigInteger(key,16);
@@ -176,20 +178,67 @@ public class DES_Skeleton {
 					bsTest.set(i, biTest.testBit(64 - i - 1));
 				}
 		//IV before would go here before IP
-		desAlg(bsTest, finalKeys);
+		bsTest = desAlg(bsTest, finalKeys);
+		//printBitSet(bsTest, 8);
+		//BigInteger forPrint = new BigInteger(outputPrint(bsTest), 2);
+		System.out.println(outputPrint(bsTest));
+		StringBuilder output = new StringBuilder();
+		//output.append(forPrint.toString(16));
+		//System.out.println(output.toString());
 		//printBitSet(bsTest, 4);
 		//printBitSet(mBits[0], 8);
 		//printBitSet(mBits[1], 8);
-		/* This will be CBC mode
-		 * temp = mBits[0].xor(IV);
-		 * finalBits[0] = desAlg(temp);
-		 * for(int i = 1; i < mBits.length; i++)
-		 * {
-		 * 		finalBits[i] = finalBits[i-1] xor mBits[i];
-		 * } 
-		 */
+		
+		SecureRandom gen = new SecureRandom();
+		byte[] IV = new byte[7];
+		
+		//System.out.print(key.format("%x", new BigInteger(1, output.getBytes())));
+		gen.nextBytes(IV);
+		String ivector = Base64.getEncoder().encodeToString(IV);//Encode the Key
+		output.append(ivector);
+		output.append("\n");
+		//System.out.println("IV = " + output);
+		BitSet iv = new BitSet();
+		iv.valueOf(IV);
+		
+		mBits[0].xor(iv);
+		BitSet[] finalBits = new BitSet[mBits.length];
+		finalBits[0] = new BitSet();
+		finalBits[0] = desAlg(mBits[0], finalKeys);
+		//printBitSet(finalBits[0], 8);
+		output.append(outputPrint(finalBits[0]));
+		output.append("\n");
+		for(int i = 1; i < finalBits.length; i++)
+		{
+			finalBits[i] = new BitSet();
+			mBits[i].xor(finalBits[i-1]);
+			finalBits[i] = desAlg(mBits[i], finalKeys);
+			//printBitSet(finalBits[i], 8);
+			output.append(outputPrint(finalBits[i]));
+			output.append("\n");
+		}
+		System.out.print(output.toString());		
 		return null;
 	
+	}
+	
+	private static String outputPrint(BitSet bits)
+	{
+		StringBuilder sb = new StringBuilder();
+		/*byte[] bytes = bits.toByteArray();
+		for(byte b : bytes)
+		{
+			sb.append(String.format("%02x ", b));
+		}*/
+		for(int i = 0; i < bits.size(); i++)
+		{
+			if(bits.get(i))
+				sb.append("1");
+			else
+				sb.append("0");
+		}
+		BigInteger forPrint = new BigInteger(sb.toString(), 2);
+		return forPrint.toString(16);
 	}
 	
 	//This returns a bit set representing the encrypted block, will be stored in an array of bit sets
@@ -228,10 +277,43 @@ public class DES_Skeleton {
 			//printBitSet(l[i], 4);
 			BitSet temp = new BitSet();
 			temp = l[i-1];
-			temp.xor(F(r[i-1], finalKeys[i-1]));
+			//System.out.println("i = " + i);
+			//System.out.print("L n -1 = ");
+			//printBitSet(temp,4);
+			BitSet fromF = new BitSet();
+			fromF = F(r[i-1], finalKeys[i-1]);//Keys used here
+			//System.out.print("From F = ");
+			//printBitSet(fromF, 4);
+			temp.xor(fromF);
+			//System.out.print("After xor = ");
+			//printBitSet(temp, 4);
 			r[i] = temp;
+			//System.out.print("R[" + i + "] = ");
+			//printBitSet(r[i], 4);
 		}
-		return null;
+		//System.out.println("After loop");
+		//printBitSet(r[16], 4);
+		//printBitSet(l[16], 4);
+		
+		BitSet cipher = new BitSet();
+		for(int i = 0; i < 64; i++)
+		{
+			if(i < 32)
+			{
+				cipher.set(i, r[16].get(i));
+			}
+			else
+				cipher.set(i, l[16].get(i - 32));
+		}
+		//printBitSet(cipher, 8);
+		
+		BitSet encrypt = new BitSet();
+		for(int i = 0; i < 64; i++)
+		{
+			encrypt.set(i, cipher.get(SBoxes.FP[i] -1));
+		}
+		//printBitSet(encrypt, 8);
+		return encrypt;//returns a bit set representing the encrypted block 
 	}
 	private static BitSet[] expandKey(BitSet keyBytes)
 	{
@@ -350,10 +432,127 @@ public class DES_Skeleton {
 		{
 			e.set(i, right.get(SBoxes.E[i] -1));
 		}
-		printBitSet(e, 6);
+		//printBitSet(e, 6);
 		e.xor(key);
-		printBitSet(e, 6);
-		return null;
+		//printBitSet(e, 6);
+		
+		BitSet[] sBits = new BitSet[8];
+		
+		int bc = 0;
+		for(int i = 0; i < 8; i++)
+		{
+			sBits[i] = new BitSet();
+			for(int j = 0; j < 6; j++)
+			{
+				 sBits[i].set(j, e.get(bc));
+				 bc++;
+			}
+		}
+		//printBitSet(sBits[1], 6);
+		BitSet[] first = new BitSet[8];
+		BitSet[] middle = new BitSet[8];
+		
+		for(int i = 0; i < 8; i++)
+		{
+			first[i] = new BitSet();
+			middle[i] = new BitSet();
+			first[i].set(0, sBits[i].get(0));
+			first[i].set(1, sBits[i].get(5));
+			middle[i].set(0, sBits[i].get(1));
+			middle[i].set(1, sBits[i].get(2));
+			middle[i].set(2, sBits[i].get(3));
+			middle[i].set(3, sBits[i].get(4));
+		}
+		
+		//printBitSet(first[0], 2);
+		//printBitSet(middle[0], 4);
+		//Gotta reverse the bit sets because when you put in big integer it reverses them
+		BitSet[] shiftedFirst = new BitSet[8];
+		BitSet[] shiftedMid = new BitSet[8];
+		for(int i = 0; i < 8; i++)
+		{
+			shiftedFirst[i] = new BitSet();
+			shiftedMid[i] = new BitSet();
+			shiftedFirst[i].set(0, first[i].get(1));
+			shiftedFirst[i].set(1, first[i].get(0));
+			
+			shiftedMid[i] = new BitSet();
+			shiftedMid[i].set(0, middle[i].get(3));
+			shiftedMid[i].set(1, middle[i].get(2));
+			shiftedMid[i].set(2, middle[i].get(1));
+			shiftedMid[i].set(3, middle[i].get(0));
+			
+		}
+		//printBitSet(shiftedFirst[0], 2);
+		//printBitSet(shiftedMid[0], 4);
+		//System.out.println(new BigInteger(shiftedFirst[0].toByteArray()).intValue());
+		BitSet sOut = new BitSet();
+		int placer = 0;
+		for(int i = 0; i < 8; i++)
+		{
+			int row = 0;
+			int col = 0;
+			if(shiftedFirst[i].get(0) != false || shiftedFirst[i].get(1) != false)
+			{
+				row = new BigInteger(shiftedFirst[i].toByteArray()).intValue();
+			}
+			if(shiftedMid[i].get(0) != false || shiftedMid[i].get(1) != false || shiftedMid[i].get(2) != false || 
+					shiftedMid[i].get(3) != false)
+			{
+				col = new BigInteger(shiftedMid[i].toByteArray()).intValue();
+			}
+			
+			int index = 0;//row * col + col;
+			if(row == 0)
+			{
+				index = col;
+			}
+			else if(row == 1)
+			{
+				index = 16 + col;
+			}
+			else if(row == 2)
+			{
+				index = 32 + col;
+			}
+			else if(row == 3)
+			{
+				index = 48 + col;
+			}
+			//System.out.println("Row = " + row + " Col = " + col + " Index = " + index);
+			byte[] s = {SBoxes.S[i][index]};
+			//System.out.println(s[0]);
+			BigInteger temp = new BigInteger(s);
+			BitSet sbs = new BitSet();
+			for(int j = 0; j < 64; j++)
+			{
+				sbs.set(j, temp.testBit(64 - j -1));
+			}
+			sbs.set(0, sbs.get(60));
+			sbs.set(1, sbs.get(61));
+			sbs.set(2, sbs.get(62));
+			sbs.set(3, sbs.get(63));
+			//sbs.clear(60, 64);
+			//printBitSet(sbs, 4);
+			for(int j = 0; j < 4; j++)
+			{
+				sOut.set(placer, sbs.get(j + 60));
+				//System.out.println(sbs.get(j+60));
+				placer++;
+			}
+			//System.out.println("Placer = " + placer);
+			//printBitSet(sOut, 4);
+		}
+		//System.out.println("Printing sOut");
+		//printBitSet(sOut, 4);
+		
+		BitSet perm = new BitSet();
+		for(int i = 0; i < 32; i++)
+		{
+			perm.set(i, sOut.get(SBoxes.P[i] -1));
+		}
+		//printBitSet(perm, 4);
+		return perm;
 	}
 	private static void printBitSet(BitSet set, int space)
 	{
