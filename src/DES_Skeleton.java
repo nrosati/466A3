@@ -92,7 +92,7 @@ public class DES_Skeleton {
 	 * TODO: You need to write the DES encryption here.
 	 * @param line
 	 */
-	@SuppressWarnings("static-access")
+	@SuppressWarnings({ "static-access", "deprecation" })
 	private static String DES_encrypt(String line,StringBuilder keyChain) {
 		String key = "";
 		try {
@@ -123,22 +123,116 @@ public class DES_Skeleton {
 		//printBitSet(keyBytes, 8);
 		
 		BitSet[] finalKeys = expandKey(keyBytes);
-		for(int i = 0; i < 16; i++)
+		/*for(int i = 0; i < 16; i++)
 		{
 			printBitSet(finalKeys[i], 6);
-		}
+		}*/
 		
-		BigInteger lineIn = new BigInteger(line);
-		BitSet message = new BitSet();
-		for(int i = 0; i < 64; i++)
+		int stringSize = line.length();
+		//System.out.println(stringSize);
+		byte[] wholeLine = line.getBytes();
+		//System.out.println(new String(wholeLine, 0));
+		while(stringSize % 8 != 0)
 		{
-			message.set(i, lineIn.testBit(64 -i -1));
+			stringSize++;
+		}
+		byte[][] mBytes = new byte[stringSize / 8][8];
+		int place = 0;
+		for(int i = 0; i < mBytes.length; i++)
+		{
+			for(int j = 0; j < 8; j++)
+			{
+				mBytes[i][j] = wholeLine[place];
+				place++;
+				
+				if(place >= line.length())
+					break;
+			}
+		}
+		//System.out.println(new String(mBytes[0], 0));
+		//System.out.println(new String(mBytes[1], 0));
+		BigInteger[] bis = new BigInteger[mBytes.length];
+		for(int i = 0; i < mBytes.length; i++)
+		{
+			bis[i] = new BigInteger(mBytes[i]);
 		}
 		
+		BitSet[] mBits = new BitSet[mBytes.length];
+		for(int i = 0; i < mBytes.length; i++)
+		{
+			mBits[i] = new BitSet();
+			for(int j = 0; j < 64; j++)
+			{
+				mBits[i].set(j, bis[i].testBit(64 - j - 1));
+			}
+		}
+		//Hard coding for comparing to website for testing
+				String messageTest = "0123456789ABCDEF";
+				BigInteger biTest = new BigInteger(messageTest, 16);
+				BitSet bsTest = new BitSet(64);
+				
+				for(int i = 0; i < 64; i++)
+				{
+					bsTest.set(i, biTest.testBit(64 - i - 1));
+				}
+		//IV before would go here before IP
+		desAlg(bsTest, finalKeys);
+		//printBitSet(bsTest, 4);
+		//printBitSet(mBits[0], 8);
+		//printBitSet(mBits[1], 8);
+		/* This will be CBC mode
+		 * temp = mBits[0].xor(IV);
+		 * finalBits[0] = desAlg(temp);
+		 * for(int i = 1; i < mBits.length; i++)
+		 * {
+		 * 		finalBits[i] = finalBits[i-1] xor mBits[i];
+		 * } 
+		 */
 		return null;
 	
 	}
 	
+	//This returns a bit set representing the encrypted block, will be stored in an array of bit sets
+	private static BitSet desAlg(BitSet toEncrypt, BitSet[] finalKeys)
+	{
+		BitSet encrypted = new BitSet();
+		//printBitSet(encrypted, 4);
+		for(int i = 0; i < 64; i++)
+		{
+			encrypted.set(i, toEncrypt.get(SBoxes.IP[i] - 1));
+		}
+		//printBitSet(encrypted, 4);
+		
+		BitSet[] l = new BitSet[17];
+		BitSet[] r = new BitSet[17];
+		for(int i = 0; i < 17; i++)
+		{
+			l[i] = new BitSet();
+			r[i] = new BitSet();
+		}
+		for(int i = 0; i < 64; i++)
+		{
+			if(i < 32)
+			{
+				l[0].set(i, encrypted.get(i));
+			}
+			else
+				r[0].set(i -32, encrypted.get(i));
+		}
+		//printBitSet(l[0], 4);
+		//printBitSet(r[0], 4);
+		for(int i = 1; i < 17; i++)
+		{
+			l[i] = r[i-1];
+			//printBitSet(finalKeys[i-1], 6);
+			//printBitSet(l[i], 4);
+			BitSet temp = new BitSet();
+			temp = l[i-1];
+			temp.xor(F(r[i-1], finalKeys[i-1]));
+			r[i] = temp;
+		}
+		return null;
+	}
 	private static BitSet[] expandKey(BitSet keyBytes)
 	{
 		BitSet shortKey = new BitSet(56);
@@ -248,60 +342,18 @@ public class DES_Skeleton {
 	/*
 	 * F Function, Ebit, Sboxes
 	 */
-	private static BitSet F (BitSet right, BitSet key)
+	private static BitSet F(BitSet right, BitSet key)
 	{
-		BitSet E = new BitSet(48);
-		for(int i = 0; i < 32; i++)
-		{
-			E.set(i, right.get(SBoxes.E[i]));
-		}
-		
-		BitSet temp = new BitSet(48);
-		temp = right;
-		temp.xor(key);
-		
-		BitSet[] blocks = new BitSet[8];
-		
-		int count = 0;
+		//printBitSet(right, 4);
+		BitSet e = new BitSet();
 		for(int i = 0; i < 48; i++)
 		{
-			blocks[i] = new BitSet(6);
-			
-			for(int j = 0; j < 6; j++)
-			{
-				blocks[i].set(j, temp.get(count));
-				count++;
-			}
+			e.set(i, right.get(SBoxes.E[i] -1));
 		}
-		
-		BitSet sOut = new BitSet(32);
-		int place = 0;
-		for(int i = 0; i < 8; i++)
-		{
-			byte[] bytes = blocks[i].toByteArray();
-			byte[] first =  {bytes[0], bytes[5]};
-			byte[] middle = {bytes[1], bytes[2], bytes[3], bytes[4]};
-			BigInteger rowBi = new BigInteger(first);
-			BigInteger colBi = new BigInteger(middle);
-			int row = rowBi.intValue();
-			int col = colBi.intValue();
-			
-			//BitSet Sout = new BitSet(32);
-			long soutint = SBoxes.S[i][(row * 15) + col];
-			BigInteger bis = BigInteger.valueOf(soutint);
-			for(int j = 0; j < 4; j++)
-			{
-				sOut.set(place, bis.testBit(j));
-				place++;
-			}
-			
-		}
-		BitSet SOUTFINALLY = new BitSet(32);
-		for(int i = 0; i < 32; i++)
-		{
-			SOUTFINALLY.set(i, sOut.get(SBoxes.P[i]));
-		}
-		return SOUTFINALLY;
+		printBitSet(e, 6);
+		e.xor(key);
+		printBitSet(e, 6);
+		return null;
 	}
 	private static void printBitSet(BitSet set, int space)
 	{
