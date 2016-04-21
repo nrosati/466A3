@@ -52,7 +52,9 @@ public class DES_Skeleton {
 			for (String line : lines) {
 				encryptedText = DES_decrypt(IVStr, line, keyChainFile);
 				writer.print(encryptedText);
+				
 			}
+			writer.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -105,8 +107,8 @@ public class DES_Skeleton {
 		//printBitSet(finalKeys[0], 6);
 		byte[] iVB = Base64.getDecoder().decode(iVStr);
 		BitSet iVBits = BitSet.valueOf(iVB);
-		System.out.print("I.V = ");
-		printBitSet(iVBits, 8);
+		//System.out.print("I.V = ");
+		//printBitSet(iVBits, 8);
 		
 		BigInteger lineBI = new BigInteger(line, 16);
 		BitSet message = new BitSet();
@@ -114,11 +116,11 @@ public class DES_Skeleton {
 		{
 			message.set(j, lineBI.testBit(64 - j - 1));
 		}
-		System.out.print("Cipher = ");
-		printBitSet(message, 8);
+		//System.out.print("Cipher = ");
+		//printBitSet(message, 8);
 		
-		System.out.print("pBlock = ");
-		printBitSet(pBlock, 8);
+		//System.out.print("pBlock = ");
+		//printBitSet(pBlock, 8);
 		BitSet[] reversedKeys = new BitSet[finalKeys.length];
 		for(int i = 0; i < 16; i++)
 		{
@@ -138,8 +140,8 @@ public class DES_Skeleton {
 		temp = message;
 		if(flag == 1)
 		{
-			System.out.println("2nd block");
-			printBitSet(pBlock, 8);
+			//System.out.println("2nd block");
+			//printBitSet(pBlock, 8);
 			decrypted = desAlg(message, reversedKeys);
 			decrypted.xor(pBlock);
 			pBlock = temp;
@@ -153,14 +155,29 @@ public class DES_Skeleton {
 			
 		
 		//Then we gotta print the bitset out in ascii somehow
-		System.out.print("Decrypted = ");
-		printBitSet(decrypted, 8);
+		//System.out.print("Decrypted = ");
+		//printBitSet(decrypted, 8);
+		String bitString = "";
+		for(int i = 0; i < decrypted.length(); i++)
+		{
+			if(decrypted.get(i))
+			{
+				bitString += '1';
+			}
+			else
+				bitString += 0;
+		}
+		//System.out.println("Decrypted.= "  + bitString);
 		String out = "";
-		byte[] output = decrypted.toByteArray();
-		System.out.println(output);
-		//Character.getNumericValue on String, bit set to a string first
-		System.out.println(out);
-		return null;
+		char nextChar;
+		for(int i = 0; i < bitString.length() - 7; i+=8)
+		{
+			nextChar = (char)Integer.parseInt(bitString.substring(i, i+8), 2);
+			out += nextChar;
+					
+		}
+		//System.out.print(out);
+		return out;
 	}
 
 
@@ -179,6 +196,7 @@ public class DES_Skeleton {
 				writer.print(encryptedText);
 				
 			}
+			writer.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -271,8 +289,8 @@ public class DES_Skeleton {
 				mBits[i].set(j, bis[i].testBit(64 - j - 1));
 			}
 		}
-		System.out.println("Binary Clear Text = ");
-		printBitSet(mBits[0], 8);
+		//System.out.println("Binary Clear Text = ");
+		//printBitSet(mBits[0], 8);
 		//Hard coding for comparing to website for testing
 				/*String messageTest = "0123456789ABCDEF";
 				BigInteger biTest = new BigInteger(messageTest, 16);
@@ -305,14 +323,14 @@ public class DES_Skeleton {
 		//System.out.println("IV = " + output);
 		BitSet iv = BitSet.valueOf(IV);
 		
-		System.out.print("IV = ");
-		printBitSet(iv, 8);
+		//System.out.print("IV = ");
+		//printBitSet(iv, 8);
 		mBits[0].xor(iv);
 		BitSet[] finalBits = new BitSet[mBits.length];
 		finalBits[0] = new BitSet();
 		finalBits[0] = desAlg(mBits[0], finalKeys);
-		System.out.print("Encrypted block = ");
-		printBitSet(finalBits[0], 8);
+		//System.out.print("Encrypted block = ");
+		//printBitSet(finalBits[0], 8);
 		output.append(outputPrint(finalBits[0]));
 		output.append("\n");
 		for(int i = 1; i < finalBits.length; i++)
@@ -324,7 +342,7 @@ public class DES_Skeleton {
 			output.append(outputPrint(finalBits[i]));
 			output.append("\n");
 		}
-		System.out.print(output.toString());		
+		//System.out.print(output.toString());		
 		return output.toString();
 	
 	}
