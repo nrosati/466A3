@@ -69,13 +69,23 @@ public class DES_Skeleton {
 		try {
 			for(String input : Files.readAllLines(Paths.get(keyStr.toString()), Charset.defaultCharset()))
 			{
-			key = input;
+			//key = input;
+			//System.out.println(input);
+			//System.out.println(input.contains("DES"));
+			if(input.contains("DES"))
+			{
+				key = input;
+			}
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		//key = key.substring(place, place + 16);
 		key = key.substring(key.length()-16, key.length());
+		//System.out.println(key);
+		
 		BigInteger binary = new BigInteger(key,16);
 		int length = binary.bitLength();
 		if(length < 64)
@@ -93,16 +103,17 @@ public class DES_Skeleton {
 		//printBitSet(finalKeys[0], 6);
 		byte[] iVB = Base64.getDecoder().decode(iVStr);
 		BitSet iVBits = BitSet.valueOf(iVB);
-		//printBitSet(iVBits, 8);
-		//Need to do this differently the output is in hex not a string
-		//byte[] lineBytes = line.getBytes();
+		System.out.print("I.V = ");
+		printBitSet(iVBits, 8);
+		
 		BigInteger lineBI = new BigInteger(line, 16);
 		BitSet message = new BitSet();
 		for(int j = 0; j < 64; j++)
 		{
 			message.set(j, lineBI.testBit(64 - j - 1));
 		}
-		//printBitSet(message, 8);
+		System.out.print("Cipher = ");
+		printBitSet(message, 8);
 		
 		BitSet[] reversedKeys = new BitSet[finalKeys.length];
 		for(int i = 0; i < 16; i++)
@@ -113,7 +124,8 @@ public class DES_Skeleton {
 		//printBitSet(reversedKeys[15], 8);
 		
 		//Do we XOR each block with the IV?  We are only getting one block at a time here so cant xor it with previous block?
-		//Keys are reveresed
+		//Keys are reveresed, IV bitset matches the IV bitset outputted from encryption
+		//message input bitset matches encrypted output bitset of encryption
 		//We can call desalg with the message bitset and the reversed keys
 		BitSet decrypted = new BitSet();
 		//XOR with IV?
@@ -122,9 +134,10 @@ public class DES_Skeleton {
 		
 		
 		//Then we gotta print the bitset out in ascii somehow
+		System.out.print("Decrypted = ");
 		printBitSet(decrypted, 8);
 		String out = Base64.getEncoder().encodeToString(decrypted.toByteArray());
-		System.out.println(out);
+		//System.out.println(decrypted.toByteArray().toString(2));
 		return null;
 	}
 
@@ -156,7 +169,13 @@ public class DES_Skeleton {
 		try {
 			for(String input : Files.readAllLines(Paths.get(keyChain.toString()), Charset.defaultCharset()))
 			{
-			key = input;
+			//key = input;
+			//System.out.println(input);
+			//System.out.println(input.contains("DES"));
+			if(input.contains("DES"))
+			{
+				key = input;
+			}
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -226,6 +245,8 @@ public class DES_Skeleton {
 				mBits[i].set(j, bis[i].testBit(64 - j - 1));
 			}
 		}
+		System.out.println("Binary Clear Text = ");
+		printBitSet(mBits[0], 8);
 		//Hard coding for comparing to website for testing
 				/*String messageTest = "0123456789ABCDEF";
 				BigInteger biTest = new BigInteger(messageTest, 16);
@@ -258,12 +279,14 @@ public class DES_Skeleton {
 		//System.out.println("IV = " + output);
 		BitSet iv = BitSet.valueOf(IV);
 		
-		//printBitSet(iv, 8);
+		System.out.print("IV = ");
+		printBitSet(iv, 8);
 		mBits[0].xor(iv);
 		BitSet[] finalBits = new BitSet[mBits.length];
 		finalBits[0] = new BitSet();
 		finalBits[0] = desAlg(mBits[0], finalKeys);
-		//printBitSet(finalBits[0], 8);
+		System.out.print("Encrypted block = ");
+		printBitSet(finalBits[0], 8);
 		output.append(outputPrint(finalBits[0]));
 		output.append("\n");
 		for(int i = 1; i < finalBits.length; i++)
@@ -636,7 +659,7 @@ public class DES_Skeleton {
 		
 		SecureRandom random = new SecureRandom();  //Create RNG instance
 		
-		byte[] bytes = new byte[8];//Change to 6 to get 56 bit key
+		byte[] bytes = new byte[6];
 		random.nextBytes(bytes);//Get 8 Random bytes = 64 bits
 		byte[] weak1 = {(byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01};
 		byte[] weak2 = {(byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE};
