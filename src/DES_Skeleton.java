@@ -65,8 +65,66 @@ public class DES_Skeleton {
 	 */
 	@SuppressWarnings("static-access")
 	private static String DES_decrypt(String iVStr, String line, StringBuilder keyStr) {
-	
-		System.out.println("TEST");
+		String key = "";
+		try {
+			for(String input : Files.readAllLines(Paths.get(keyStr.toString()), Charset.defaultCharset()))
+			{
+			key = input;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		key = key.substring(key.length()-16, key.length());
+		BigInteger binary = new BigInteger(key,16);
+		int length = binary.bitLength();
+		if(length < 64)
+		{
+			int temp = 64 - length;
+			length += temp;
+		}
+		BitSet keyBytes = new BitSet(length);//Maybe be 64?
+		for(int i = 0; i < length; i++)
+		{
+			keyBytes.set(i, binary.testBit(length - i - 1));
+		}
+		//printBitSet(keyBytes, 8);
+		BitSet[] finalKeys = expandKey(keyBytes);
+		//printBitSet(finalKeys[0], 6);
+		byte[] iVB = Base64.getDecoder().decode(iVStr);
+		BitSet iVBits = BitSet.valueOf(iVB);
+		//printBitSet(iVBits, 8);
+		//Need to do this differently the output is in hex not a string
+		//byte[] lineBytes = line.getBytes();
+		BigInteger lineBI = new BigInteger(line, 16);
+		BitSet message = new BitSet();
+		for(int j = 0; j < 64; j++)
+		{
+			message.set(j, lineBI.testBit(64 - j - 1));
+		}
+		//printBitSet(message, 8);
+		
+		BitSet[] reversedKeys = new BitSet[finalKeys.length];
+		for(int i = 0; i < 16; i++)
+		{
+			reversedKeys[i] = finalKeys[15 -i];
+		}
+		//printBitSet(finalKeys[0], 8);
+		//printBitSet(reversedKeys[15], 8);
+		
+		//Do we XOR each block with the IV?  We are only getting one block at a time here so cant xor it with previous block?
+		//Keys are reveresed
+		//We can call desalg with the message bitset and the reversed keys
+		BitSet decrypted = new BitSet();
+		//XOR with IV?
+		message.xor(iVBits);
+		decrypted = desAlg(message, reversedKeys);
+		
+		
+		//Then we gotta print the bitset out in ascii somehow
+		printBitSet(decrypted, 8);
+		String out = Base64.getEncoder().encodeToString(decrypted.toByteArray());
+		System.out.println(out);
 		return null;
 	}
 
@@ -169,19 +227,19 @@ public class DES_Skeleton {
 			}
 		}
 		//Hard coding for comparing to website for testing
-				String messageTest = "0123456789ABCDEF";
+				/*String messageTest = "0123456789ABCDEF";
 				BigInteger biTest = new BigInteger(messageTest, 16);
 				BitSet bsTest = new BitSet(64);
 				
 				for(int i = 0; i < 64; i++)
 				{
 					bsTest.set(i, biTest.testBit(64 - i - 1));
-				}
+				}*/
 		//IV before would go here before IP
-		bsTest = desAlg(bsTest, finalKeys);
+		//bsTest = desAlg(bsTest, finalKeys);
 		//printBitSet(bsTest, 8);
 		//BigInteger forPrint = new BigInteger(outputPrint(bsTest), 2);
-		System.out.println(outputPrint(bsTest));
+		//System.out.println(outputPrint(bsTest));
 		StringBuilder output = new StringBuilder();
 		//output.append(forPrint.toString(16));
 		//System.out.println(output.toString());
@@ -190,7 +248,7 @@ public class DES_Skeleton {
 		//printBitSet(mBits[1], 8);
 		
 		SecureRandom gen = new SecureRandom();
-		byte[] IV = new byte[7];
+		byte[] IV = new byte[8];
 		
 		//System.out.print(key.format("%x", new BigInteger(1, output.getBytes())));
 		gen.nextBytes(IV);
@@ -198,9 +256,9 @@ public class DES_Skeleton {
 		output.append(ivector);
 		output.append("\n");
 		//System.out.println("IV = " + output);
-		BitSet iv = new BitSet();
-		iv.valueOf(IV);
+		BitSet iv = BitSet.valueOf(IV);
 		
+		//printBitSet(iv, 8);
 		mBits[0].xor(iv);
 		BitSet[] finalBits = new BitSet[mBits.length];
 		finalBits[0] = new BitSet();
@@ -218,7 +276,7 @@ public class DES_Skeleton {
 			output.append("\n");
 		}
 		System.out.print(output.toString());		
-		return null;
+		return output.toString();
 	
 	}
 	
@@ -578,7 +636,7 @@ public class DES_Skeleton {
 		
 		SecureRandom random = new SecureRandom();  //Create RNG instance
 		
-		byte[] bytes = new byte[7];//Change to 6 to get 56 bit key
+		byte[] bytes = new byte[8];//Change to 6 to get 56 bit key
 		random.nextBytes(bytes);//Get 8 Random bytes = 64 bits
 		byte[] weak1 = {(byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01};
 		byte[] weak2 = {(byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE};
