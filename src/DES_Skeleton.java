@@ -66,7 +66,7 @@ public class DES_Skeleton {
 	@SuppressWarnings("static-access")
 	private static String DES_decrypt(String iVStr, String line, StringBuilder keyStr) {
 	
-		
+		System.out.println("TEST");
 		return null;
 	}
 
