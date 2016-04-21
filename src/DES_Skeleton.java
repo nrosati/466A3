@@ -20,7 +20,7 @@ import gnu.getopt.Getopt;
 @SuppressWarnings("unused")
 public class DES_Skeleton {
 	
-	
+	static BitSet pBlock = new BitSet();
 	public static void main(String[] args) {
 		
 		StringBuilder inputFile = new StringBuilder();
@@ -81,7 +81,9 @@ public class DES_Skeleton {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		int flag = 0;
+		if(pBlock.cardinality() != 0)
+			flag = 1;
 		//key = key.substring(place, place + 16);
 		key = key.substring(key.length()-16, key.length());
 		//System.out.println(key);
@@ -115,6 +117,8 @@ public class DES_Skeleton {
 		System.out.print("Cipher = ");
 		printBitSet(message, 8);
 		
+		System.out.print("pBlock = ");
+		printBitSet(pBlock, 8);
 		BitSet[] reversedKeys = new BitSet[finalKeys.length];
 		for(int i = 0; i < 16; i++)
 		{
@@ -129,15 +133,33 @@ public class DES_Skeleton {
 		//We can call desalg with the message bitset and the reversed keys
 		BitSet decrypted = new BitSet();
 		//XOR with IV?
-		message.xor(iVBits);
-		decrypted = desAlg(message, reversedKeys);
-		
+		//message.xor(iVBits);
+		BitSet temp = new BitSet();
+		temp = message;
+		if(flag == 1)
+		{
+			System.out.println("2nd block");
+			printBitSet(pBlock, 8);
+			decrypted = desAlg(message, reversedKeys);
+			decrypted.xor(pBlock);
+			pBlock = temp;
+		}
+		else
+		{
+			pBlock = message;
+			decrypted = desAlg(message, reversedKeys);
+			decrypted.xor(iVBits);
+		}
+			
 		
 		//Then we gotta print the bitset out in ascii somehow
 		System.out.print("Decrypted = ");
 		printBitSet(decrypted, 8);
-		String out = Base64.getEncoder().encodeToString(decrypted.toByteArray());
-		//System.out.println(decrypted.toByteArray().toString(2));
+		String out = "";
+		byte[] output = decrypted.toByteArray();
+		System.out.println(output);
+		//Character.getNumericValue on String, bit set to a string first
+		System.out.println(out);
 		return null;
 	}
 
@@ -151,7 +173,11 @@ public class DES_Skeleton {
 			String encryptedText;
 			for (String line : Files.readAllLines(Paths.get(inputFile.toString()), Charset.defaultCharset())) {
 				encryptedText = DES_encrypt(line, keyStr);
+				//Scanner 
+				//while loop over encrypted text.has next
+				
 				writer.print(encryptedText);
+				
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
