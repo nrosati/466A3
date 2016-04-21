@@ -20,6 +20,7 @@ import gnu.getopt.Getopt;
 @SuppressWarnings("unused")
 public class DES_Skeleton {
 	
+	//Global - holds the previous cyphertext block for DES_decrypt
 	static BitSet pBlock = new BitSet();
 	public static void main(String[] args) {
 		
@@ -36,7 +37,6 @@ public class DES_Skeleton {
 			decrypt(keyChainFile, inputFile, outputFile);
 		}
 		
-		
 	}
 	
 
@@ -52,9 +52,8 @@ public class DES_Skeleton {
 			for (String line : lines) {
 				encryptedText = DES_decrypt(IVStr, line, keyChainFile);
 				writer.print(encryptedText);
-				
 			}
-			writer.close();
+			writer.close();//Close writer after all the lines have been processed to write them to the file
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -62,86 +61,94 @@ public class DES_Skeleton {
 	}
 
 	/**
-	 * TODO: You need to write the DES encryption here.
-	 * @param line
+	 * String DES_Decrypt
+	 * This method takes a String representation of an Initialization Vector, a String of cyphertext in ascii,
+	 * and a String Builder linked with a file that contains a key.  This method takes the cyphertext given and decrypts it 
+	 * using the key from keyStr and returns it as plain text.
+	 * @param String iVStr
+	 * @param String line
+	 * @param KeyStr
 	 */
-	@SuppressWarnings("static-access")
 	private static String DES_decrypt(String iVStr, String line, StringBuilder keyStr) {
 		String key = "";
 		try {
 			for(String input : Files.readAllLines(Paths.get(keyStr.toString()), Charset.defaultCharset()))
 			{
-			//key = input;
-			//System.out.println(input);
-			//System.out.println(input.contains("DES"));
-			if(input.contains("DES"))
+			if(input.contains("DES"))//Look for DES
 			{
-				key = input;
+				key = input;//Since there is only one DES we can set it like this
 			}
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		//flag to see if this is the first block we are decoding or not
 		int flag = 0;
+		//Check to see if the previous block has been used or not
 		if(pBlock.cardinality() != 0)
 			flag = 1;
-		//key = key.substring(place, place + 16);
+		//Since we have the only line with DES we only want the key
 		key = key.substring(key.length()-16, key.length());
-		//System.out.println(key);
 		
+		//Convert the key to a big integer
 		BigInteger binary = new BigInteger(key,16);
 		int length = binary.bitLength();
+		//Make the length 64 for 64 bits
 		if(length < 64)
 		{
 			int temp = 64 - length;
 			length += temp;
 		}
-		BitSet keyBytes = new BitSet(length);//Maybe be 64?
+		/*Big Integer is BigEndian and BitSet is little so the bits are 
+		 * reversed in the two Therefore we have to set the bits one by 
+		 * one starting at the end of the BigInteger To the beginning of 
+		 * the BitSet*/
+		BitSet keyBytes = new BitSet(length);
 		for(int i = 0; i < length; i++)
 		{
 			keyBytes.set(i, binary.testBit(length - i - 1));
 		}
-		//printBitSet(keyBytes, 8);
-		BitSet[] finalKeys = expandKey(keyBytes);
-		//printBitSet(finalKeys[0], 6);
-		byte[] iVB = Base64.getDecoder().decode(iVStr);
-		BitSet iVBits = BitSet.valueOf(iVB);
-		//System.out.print("I.V = ");
-		//printBitSet(iVBits, 8);
 		
+		BitSet[] finalKeys = expandKey(keyBytes);
+		
+		//IV comes from encrypt as Base64 encoded so decode it here into an 
+		//array of bytes
+		byte[] iVB = Base64.getDecoder().decode(iVStr);
+		//Turn those bytes into a Bit Set
+		BitSet iVBits = BitSet.valueOf(iVB);
+		
+		//Here the line is in ascii, have to convert it to binary bit set, same
+		//process as used above for the key
 		BigInteger lineBI = new BigInteger(line, 16);
 		BitSet message = new BitSet();
 		for(int j = 0; j < 64; j++)
 		{
 			message.set(j, lineBI.testBit(64 - j - 1));
 		}
-		//System.out.print("Cipher = ");
-		//printBitSet(message, 8);
 		
-		//System.out.print("pBlock = ");
-		//printBitSet(pBlock, 8);
+		
+		//For decryption we run the algorithm with the keys reversed
 		BitSet[] reversedKeys = new BitSet[finalKeys.length];
 		for(int i = 0; i < 16; i++)
 		{
 			reversedKeys[i] = finalKeys[15 -i];
 		}
-		//printBitSet(finalKeys[0], 8);
-		//printBitSet(reversedKeys[15], 8);
 		
-		//Do we XOR each block with the IV?  We are only getting one block at a time here so cant xor it with previous block?
-		//Keys are reveresed, IV bitset matches the IV bitset outputted from encryption
-		//message input bitset matches encrypted output bitset of encryption
-		//We can call desalg with the message bitset and the reversed keys
 		BitSet decrypted = new BitSet();
-		//XOR with IV?
-		//message.xor(iVBits);
-		BitSet temp = new BitSet();
+		
+		BitSet temp = new BitSet();//temp to hold original message before xor
 		temp = message;
+		/*
+		 * Here we run the algorithm and xor with the IV vector if its the first run
+		 * or the previous cyphertext if its after the initial run. Temp is used to
+		 * store the cyphertext to put into pBlock(the previous block global variable) 
+		 * before it xor.  pBlock has to be set after Xor or you will xor the message
+		 * with itself.  
+		 *  
+		 */
 		if(flag == 1)
 		{
-			//System.out.println("2nd block");
-			//printBitSet(pBlock, 8);
 			decrypted = desAlg(message, reversedKeys);
 			decrypted.xor(pBlock);
 			pBlock = temp;
@@ -154,9 +161,10 @@ public class DES_Skeleton {
 		}
 			
 		
-		//Then we gotta print the bitset out in ascii somehow
-		//System.out.print("Decrypted = ");
-		//printBitSet(decrypted, 8);
+		/*
+		 * To print the binary bitset out as plain text string we create a string that mirrors 
+		 * the bitset.  I.e a 1 in the bitset correlates to a 1 character in the string.
+		 */
 		String bitString = "";
 		for(int i = 0; i < decrypted.length(); i++)
 		{
@@ -167,7 +175,12 @@ public class DES_Skeleton {
 			else
 				bitString += 0;
 		}
-		//System.out.println("Decrypted.= "  + bitString);
+		/*
+		 * Then we go through our string 8 chars at a time and we use
+		 * Integer.parseInt with the radix 2 to get a number out
+		 * And we cast that number as a char and append the char
+		 * to our output string
+		 */
 		String out = "";
 		char nextChar;
 		for(int i = 0; i < bitString.length() - 7; i+=8)
@@ -176,7 +189,6 @@ public class DES_Skeleton {
 			out += nextChar;
 					
 		}
-		//System.out.print(out);
 		return out;
 	}
 
@@ -190,8 +202,6 @@ public class DES_Skeleton {
 			String encryptedText;
 			for (String line : Files.readAllLines(Paths.get(inputFile.toString()), Charset.defaultCharset())) {
 				encryptedText = DES_encrypt(line, keyStr);
-				//Scanner 
-				//while loop over encrypted text.has next
 				
 				writer.print(encryptedText);
 				
@@ -204,18 +214,19 @@ public class DES_Skeleton {
 		
 	}
 	/**
-	 * TODO: You need to write the DES encryption here.
+	 * Takes a line containing the entirety of a file and a keyChain file and encrypts them.
+	 * The line is broken into 64 bit chunks, the key is in hexidecimal and is turned into binary.
+	 * The key is expanded, then the message is encrypted.  Uses DES CBC mode.  
 	 * @param line
+	 * @param keyChain
 	 */
-	@SuppressWarnings({ "static-access", "deprecation" })
+	@SuppressWarnings({ })
 	private static String DES_encrypt(String line,StringBuilder keyChain) {
 		String key = "";
 		try {
 			for(String input : Files.readAllLines(Paths.get(keyChain.toString()), Charset.defaultCharset()))
 			{
-			//key = input;
-			//System.out.println(input);
-			//System.out.println(input.contains("DES"));
+			//Look for the line that has DES, theres only one and set the String key to it
 			if(input.contains("DES"))
 			{
 				key = input;
@@ -226,9 +237,9 @@ public class DES_Skeleton {
 			e.printStackTrace();
 		}
 		
-		
+		//The actual key is the last 16 characters so take those
 		key = key.substring(key.length()-16, key.length());
-		//System.out.println(key);
+		//Convert to BigInteger to get bits
 		BigInteger binary = new BigInteger(key,16);
 	
 		int length = binary.bitLength();
@@ -237,24 +248,28 @@ public class DES_Skeleton {
 			int temp = 64 - length;
 			length += temp;
 		}
-		BitSet keyBytes = new BitSet(length);//Maybe be 64?
+		/*
+		 * Again BigInteger is BigE Bitset is littleE so we have to copy the bits one by one in reverse
+		 */
+		BitSet keyBytes = new BitSet(length);
 		for(int i = 0; i < length; i++)
 		{
 			keyBytes.set(i, binary.testBit(length - i - 1));
 		}
-		//System.out.println(keyBytes.size());
-		//printBitSet(keyBytes, 8);
-		
+		/*
+		 * Calls the expand keys method I wrote that transforms the 64 bit key into 
+		 * 16 48 byte keys
+		 */
 		BitSet[] finalKeys = expandKey(keyBytes);
-		/*for(int i = 0; i < 16; i++)
-		{
-			printBitSet(finalKeys[i], 6);
-		}*/
-		
+	
+		/*
+		 * Here we make an array of byte arrays, each byte array is 8 bytes and 
+		 * we have as many as needed to fit the whole message.  Specifically
+		 * we see how long the line is, and we increase it if necessary until
+		 * it is divisible by 8.  Then thats how many arrays we need divided by 8.
+		 */
 		int stringSize = line.length();
-		//System.out.println(stringSize);
-		byte[] wholeLine = line.getBytes();
-		//System.out.println(new String(wholeLine, 0));
+		byte[] wholeLine = line.getBytes();//Create byte array of the whole line
 		while(stringSize % 8 != 0)
 		{
 			stringSize++;
@@ -263,6 +278,8 @@ public class DES_Skeleton {
 		int place = 0;
 		for(int i = 0; i < mBytes.length; i++)
 		{
+			//Here we break the byte array of the whole message into chunks of 8 bytes
+			//So in our 2d array we have the whole message in 8 byte chunks(64 bits)
 			for(int j = 0; j < 8; j++)
 			{
 				mBytes[i][j] = wholeLine[place];
@@ -272,14 +289,22 @@ public class DES_Skeleton {
 					break;
 			}
 		}
-		//System.out.println(new String(mBytes[0], 0));
-		//System.out.println(new String(mBytes[1], 0));
+		
+		/*
+		 * Here we go again with converting to a big integer just an array
+		 * this time to hold each of the 8 byte arrays we just made
+		 */
 		BigInteger[] bis = new BigInteger[mBytes.length];
 		for(int i = 0; i < mBytes.length; i++)
 		{
 			bis[i] = new BigInteger(mBytes[i]);
 		}
 		
+		/*
+		 * Our array of BitSets to hold the 64 bit chunks of the message
+		 * from our byte arrays, now in BigIntegers.  Here we again copy
+		 * bit by bit in reverse.
+		 */
 		BitSet[] mBits = new BitSet[mBytes.length];
 		for(int i = 0; i < mBytes.length; i++)
 		{
@@ -289,72 +314,76 @@ public class DES_Skeleton {
 				mBits[i].set(j, bis[i].testBit(64 - j - 1));
 			}
 		}
-		//System.out.println("Binary Clear Text = ");
-		//printBitSet(mBits[0], 8);
+		
 		//Hard coding for comparing to website for testing
-				/*String messageTest = "0123456789ABCDEF";
-				BigInteger biTest = new BigInteger(messageTest, 16);
-				BitSet bsTest = new BitSet(64);
+		/*String messageTest = "0123456789ABCDEF";
+		BigInteger biTest = new BigInteger(messageTest, 16);
+		BitSet bsTest = new BitSet(64);
 				
-				for(int i = 0; i < 64; i++)
-				{
-					bsTest.set(i, biTest.testBit(64 - i - 1));
-				}*/
+		for(int i = 0; i < 64; i++)
+		{
+			bsTest.set(i, biTest.testBit(64 - i - 1));
+		}*/
 		//IV before would go here before IP
 		//bsTest = desAlg(bsTest, finalKeys);
 		//printBitSet(bsTest, 8);
-		//BigInteger forPrint = new BigInteger(outputPrint(bsTest), 2);
 		//System.out.println(outputPrint(bsTest));
-		StringBuilder output = new StringBuilder();
-		//output.append(forPrint.toString(16));
-		//System.out.println(output.toString());
-		//printBitSet(bsTest, 4);
-		//printBitSet(mBits[0], 8);
-		//printBitSet(mBits[1], 8);
 		
+		//We use a string builder to build our output
+		StringBuilder output = new StringBuilder();
+		
+		//Generate Initialization Vector
 		SecureRandom gen = new SecureRandom();
 		byte[] IV = new byte[8];
 		
-		//System.out.print(key.format("%x", new BigInteger(1, output.getBytes())));
 		gen.nextBytes(IV);
-		String ivector = Base64.getEncoder().encodeToString(IV);//Encode the Key
+		String ivector = Base64.getEncoder().encodeToString(IV);//Encode the Key for output
 		output.append(ivector);
 		output.append("\n");
-		//System.out.println("IV = " + output);
-		BitSet iv = BitSet.valueOf(IV);
+		BitSet iv = BitSet.valueOf(IV);//Convert IV to bitSet
 		
-		//System.out.print("IV = ");
-		//printBitSet(iv, 8);
+		/*
+		 * Xor the first block with the iv
+		 * create an array of bitsets to store the results
+		 * run the first block through the algorithm after being
+		 * xor with the IV
+		 */
 		mBits[0].xor(iv);
 		BitSet[] finalBits = new BitSet[mBits.length];
 		finalBits[0] = new BitSet();
 		finalBits[0] = desAlg(mBits[0], finalKeys);
-		//System.out.print("Encrypted block = ");
-		//printBitSet(finalBits[0], 8);
+		
+		//Calls a print method I wrote and appends it to the string builder
 		output.append(outputPrint(finalBits[0]));
-		output.append("\n");
+		output.append("\n");//Seperate by new line
+		/*
+		 * Now while we have message blocks to encrypt we xor with the previous block
+		 * starting with the 2nd block, and send it through the des algorithm.  The
+		 * cypherblock is appended to the string builder separated by new lines.
+		 */
 		for(int i = 1; i < finalBits.length; i++)
 		{
 			finalBits[i] = new BitSet();
 			mBits[i].xor(finalBits[i-1]);
 			finalBits[i] = desAlg(mBits[i], finalKeys);
-			//printBitSet(finalBits[i], 8);
 			output.append(outputPrint(finalBits[i]));
 			output.append("\n");
 		}
-		//System.out.print(output.toString());		
+				
 		return output.toString();
 	
 	}
-	
+	/*
+	 * Print method I wrote.  Creates a string that mirrors the bit set.
+	 * So a 1 in the bit set means a 1 character at the same position
+	 * but in a string.  Then we turn that String into a Big Integer 
+	 * with the radix 2, then we call to string with the radix 16 and return that.
+	 * The result is a hex string representing a binary bit set  
+	 */
 	private static String outputPrint(BitSet bits)
 	{
 		StringBuilder sb = new StringBuilder();
-		/*byte[] bytes = bits.toByteArray();
-		for(byte b : bytes)
-		{
-			sb.append(String.format("%02x ", b));
-		}*/
+
 		for(int i = 0; i < bits.size(); i++)
 		{
 			if(bits.get(i))
@@ -366,17 +395,20 @@ public class DES_Skeleton {
 		return forPrint.toString(16);
 	}
 	
-	//This returns a bit set representing the encrypted block, will be stored in an array of bit sets
+	/*
+	 * This is the DES algorithm.   It takes the bitset to encrypt and the array
+	 * of 16 keys.  Follows the algorithm of Left and Right and all that.
+	 * Calls the function F for the Fiestal network.  Returns a 64 bit bitset 
+	 * representing the cypherblock text.
+	 */
 	private static BitSet desAlg(BitSet toEncrypt, BitSet[] finalKeys)
 	{
 		BitSet encrypted = new BitSet();
-		//printBitSet(encrypted, 4);
 		for(int i = 0; i < 64; i++)
 		{
-			encrypted.set(i, toEncrypt.get(SBoxes.IP[i] - 1));
+			encrypted.set(i, toEncrypt.get(SBoxes.IP[i] - 1));//Initial permutation
 		}
-		//printBitSet(encrypted, 4);
-		
+		//Create arrays of left and right halves
 		BitSet[] l = new BitSet[17];
 		BitSet[] r = new BitSet[17];
 		for(int i = 0; i < 17; i++)
@@ -384,6 +416,7 @@ public class DES_Skeleton {
 			l[i] = new BitSet();
 			r[i] = new BitSet();
 		}
+		//Split text in half, set to initial halves
 		for(int i = 0; i < 64; i++)
 		{
 			if(i < 32)
@@ -393,33 +426,29 @@ public class DES_Skeleton {
 			else
 				r[0].set(i -32, encrypted.get(i));
 		}
-		//printBitSet(l[0], 4);
-		//printBitSet(r[0], 4);
+		
+		/*
+		 * Meat of the algorithm, sets left have to previous right half,
+		 * sends previous right half through the fiestal network with the keys.
+		 * Xor the previous left with the result and set as new right half
+		 */
 		for(int i = 1; i < 17; i++)
 		{
 			l[i] = r[i-1];
-			//printBitSet(finalKeys[i-1], 6);
-			//printBitSet(l[i], 4);
+			
 			BitSet temp = new BitSet();
 			temp = l[i-1];
-			//System.out.println("i = " + i);
-			//System.out.print("L n -1 = ");
-			//printBitSet(temp,4);
+			
 			BitSet fromF = new BitSet();
-			fromF = F(r[i-1], finalKeys[i-1]);//Keys used here
-			//System.out.print("From F = ");
-			//printBitSet(fromF, 4);
+			fromF = F(r[i-1], finalKeys[i-1]);//Keys used here, 0 based so minus 1
+			
 			temp.xor(fromF);
-			//System.out.print("After xor = ");
-			//printBitSet(temp, 4);
-			r[i] = temp;
-			//System.out.print("R[" + i + "] = ");
-			//printBitSet(r[i], 4);
-		}
-		//System.out.println("After loop");
-		//printBitSet(r[16], 4);
-		//printBitSet(l[16], 4);
 		
+			r[i] = temp;
+			
+		}
+		
+		//Combines the 16th right half and left half
 		BitSet cipher = new BitSet();
 		for(int i = 0; i < 64; i++)
 		{
@@ -430,26 +459,29 @@ public class DES_Skeleton {
 			else
 				cipher.set(i, l[16].get(i - 32));
 		}
-		//printBitSet(cipher, 8);
 		
+		//Final permutation
 		BitSet encrypt = new BitSet();
 		for(int i = 0; i < 64; i++)
 		{
 			encrypt.set(i, cipher.get(SBoxes.FP[i] -1));
 		}
-		//printBitSet(encrypt, 8);
+		
 		return encrypt;//returns a bit set representing the encrypted block 
 	}
+	/*
+	 * This function goes through some permutations in SBoxes.java
+	 * to turn the 64bit input key into 16 48 bit keys
+	 */
 	private static BitSet[] expandKey(BitSet keyBytes)
 	{
 		BitSet shortKey = new BitSet(56);
 		for(int i = 0; i < 56; i++)
 		{
-			shortKey.set(i, keyBytes.get(SBoxes.PC1[i] -1));
+			shortKey.set(i, keyBytes.get(SBoxes.PC1[i] -1));//First permutation, key now 56 bits
 		}
-		//System.out.println(shortKey.length());
-		//printBitSet(shortKey, 7);
 		
+		//Split into two halves
 		BitSet[] C = new BitSet[17];
 		BitSet[] D = new BitSet[17];
 		
@@ -465,29 +497,26 @@ public class DES_Skeleton {
 			else
 				D[0].set(i - 28, shortKey.get(i));
 		}
-		//printBitSet(C[0], 7);
-		//printBitSet(D[0], 7);
-
+		
+		//Shifts of the keys
+		//Current keys are the previous keys shifted amount of times
+		//Depends on rotations in SBoxes.java
+		//Calls the leftShift function I wrote
 		for(int i = 1; i < 17; i++)
 		{
 			C[i] = leftShift(C[i-1], SBoxes.rotations[i - 1]);
-			/*System.out.print("C ");
-			System.out.print(i);
-			System.out.print(" = ");
-			printBitSet(C[i], 28);*/
 			D[i] = leftShift(D[i-1], SBoxes.rotations[i -1]);
-			/*System.out.print("D ");
-			System.out.print(i);
-			System.out.print(" = ");
-			printBitSet(D[i], 28);*/
+		
 		}
 		
+		//Create array of keys
 		BitSet[] Kn = new BitSet[16];
 		for(int i = 0; i < 16; i++)
 		{
 			Kn[i] = new BitSet(64);
 		}
 		
+		//For each of the 16 keys split into 56 bit halves
 		for(int i = 0; i < 16; i++)
 		{
 			for(int j = 0; j < 56; j++)
@@ -501,39 +530,38 @@ public class DES_Skeleton {
 			}
 		}
 		
-		/*for(int i = 0; i < 16; i++)
-		{
-			System.out.print("Kn " + i + " = ");
-			printBitSet(Kn[i], 56);
-		}*/
-		
+		//Take our keys through one last permutation 
 		BitSet[] finalKeys = new BitSet[16];
 		for(int i = 0; i < 16; i++)
 		{
 			finalKeys[i] = new BitSet();
 			for(int j = 0; j < 48; j++)
 			{
-				finalKeys[i].set(j, Kn[i].get(SBoxes.PC2[j] -1));
+				finalKeys[i].set(j, Kn[i].get(SBoxes.PC2[j] -1));//Keys now 48 bits
 			}
 		}
 		
-		/*for(int i = 0; i < 16; i++)
-		{
-			System.out.print("Kn " + (i) +  " = ");
-			printBitSet(finalKeys[i], 6);
-		}*/
 		
-		return finalKeys;
+		return finalKeys;//Array of 16 48 bit keys
 		
 	}
 	
+	/*
+	 * Left Shift function I wrote for shifting in BitSets
+	 * Easier than converting to BigInteger then back to bit set
+	 * Only works because maximum number of shifts is 2
+	 */
 	private static BitSet leftShift(BitSet set, int shifts)
 	{
 		BitSet shifted = new BitSet();
-		boolean bit = set.get(0);
-		//System.out.println(bit);
+		boolean bit = set.get(0);//Get the first bit value
+		/*
+		 * returns a bit set from index to index, so from 1 to the end.
+		 * then we set the last bit(27) to the first bit we took above.
+		 */
 		shifted = set.get(1, set.length());
 		shifted.set(27, bit);
+		//If shifts is 2 we just do it again
 		if(shifts == 2)
 		{
 			bit = shifted.get(0);
@@ -541,29 +569,27 @@ public class DES_Skeleton {
 			shifted.set(27, bit);
 		}
 		
-		
-		//printBitSet(shifted, 28);
 		return shifted;
 	}
 	
 	/*
-	 * F Function, Ebit, Sboxes
+	 * Fiestel Network, takes a bitset and a key and does some
+	 * permutations on them as well as xor with the key passed in
 	 */
 	private static BitSet F(BitSet right, BitSet key)
 	{
-		//printBitSet(right, 4);
+		//Permutate the bit set passed in(half a message block)
 		BitSet e = new BitSet();
 		for(int i = 0; i < 48; i++)
 		{
 			e.set(i, right.get(SBoxes.E[i] -1));
 		}
-		//printBitSet(e, 6);
+		//Xor result with the key
 		e.xor(key);
-		//printBitSet(e, 6);
-		
+	
+		//Here we break the 48 bit block into 8 blocks of 6 for the sboxes
 		BitSet[] sBits = new BitSet[8];
-		
-		int bc = 0;
+		int bc = 0;//Persistent counter to keep space on original 48 bit block
 		for(int i = 0; i < 8; i++)
 		{
 			sBits[i] = new BitSet();
@@ -573,10 +599,12 @@ public class DES_Skeleton {
 				 bc++;
 			}
 		}
-		//printBitSet(sBits[1], 6);
+		
+		//Now we take the first and last bit and the middle 4 bits of
+		//Each 6 bit block and store them in arrays
 		BitSet[] first = new BitSet[8];
 		BitSet[] middle = new BitSet[8];
-		
+		//Just done manually
 		for(int i = 0; i < 8; i++)
 		{
 			first[i] = new BitSet();
@@ -589,9 +617,8 @@ public class DES_Skeleton {
 			middle[i].set(3, sBits[i].get(4));
 		}
 		
-		//printBitSet(first[0], 2);
-		//printBitSet(middle[0], 4);
 		//Gotta reverse the bit sets because when you put in big integer it reverses them
+		//Again just hard coded
 		BitSet[] shiftedFirst = new BitSet[8];
 		BitSet[] shiftedMid = new BitSet[8];
 		for(int i = 0; i < 8; i++)
@@ -608,18 +635,19 @@ public class DES_Skeleton {
 			shiftedMid[i].set(3, middle[i].get(0));
 			
 		}
-		//printBitSet(shiftedFirst[0], 2);
-		//printBitSet(shiftedMid[0], 4);
-		//System.out.println(new BigInteger(shiftedFirst[0].toByteArray()).intValue());
+		
 		BitSet sOut = new BitSet();
 		int placer = 0;
+		
 		for(int i = 0; i < 8; i++)
 		{
+			//Set them to 0 initially BigInt Doesnt like 0
+			//So if its 0 we already have an int of that, if not BI will change it
 			int row = 0;
 			int col = 0;
-			if(shiftedFirst[i].get(0) != false || shiftedFirst[i].get(1) != false)
+			if(shiftedFirst[i].get(0) != false || shiftedFirst[i].get(1) != false)//Make sure not 0 so no error from BI
 			{
-				row = new BigInteger(shiftedFirst[i].toByteArray()).intValue();
+				row = new BigInteger(shiftedFirst[i].toByteArray()).intValue();//Get int value for Sbox
 			}
 			if(shiftedMid[i].get(0) != false || shiftedMid[i].get(1) != false || shiftedMid[i].get(2) != false || 
 					shiftedMid[i].get(3) != false)
@@ -627,7 +655,8 @@ public class DES_Skeleton {
 				col = new BigInteger(shiftedMid[i].toByteArray()).intValue();
 			}
 			
-			int index = 0;//row * col + col;
+			//Some math to get the right index of the SBox we want from a row and col value
+			int index = 0;
 			if(row == 0)
 			{
 				index = col;
@@ -644,41 +673,45 @@ public class DES_Skeleton {
 			{
 				index = 48 + col;
 			}
-			//System.out.println("Row = " + row + " Col = " + col + " Index = " + index);
-			byte[] s = {SBoxes.S[i][index]};
-			//System.out.println(s[0]);
-			BigInteger temp = new BigInteger(s);
+			
+			byte[] s = {SBoxes.S[i][index]};//Get the Byte from the Sbox
+
+			BigInteger temp = new BigInteger(s);//Turn it into a Big Integer
 			BitSet sbs = new BitSet();
+			//Turn the BigInteger into a bit set
 			for(int j = 0; j < 64; j++)
 			{
 				sbs.set(j, temp.testBit(64 - j -1));
 			}
+			//For Some reason it kept setting the last 4 bits of the bitset
+			//So just copy them to the first 4
 			sbs.set(0, sbs.get(60));
 			sbs.set(1, sbs.get(61));
 			sbs.set(2, sbs.get(62));
 			sbs.set(3, sbs.get(63));
-			//sbs.clear(60, 64);
-			//printBitSet(sbs, 4);
+			
 			for(int j = 0; j < 4; j++)
 			{
-				sOut.set(placer, sbs.get(j + 60));
-				//System.out.println(sbs.get(j+60));
-				placer++;
+				sOut.set(placer, sbs.get(j + 60));//Set sOut our bit set containing all the bits from the Sboxes
+				placer++;//Use placer to keep track of where we are in sOUt
 			}
-			//System.out.println("Placer = " + placer);
-			//printBitSet(sOut, 4);
 		}
-		//System.out.println("Printing sOut");
-		//printBitSet(sOut, 4);
 		
+		//Send through more permutations
 		BitSet perm = new BitSet();
 		for(int i = 0; i < 32; i++)
 		{
 			perm.set(i, sOut.get(SBoxes.P[i] -1));
 		}
-		//printBitSet(perm, 4);
+		
 		return perm;
 	}
+	/*
+	 * This was a print method I wrote to test output as I was working
+	 * It takes a bit set and where you want spaces to go.
+	 * So enter 8 will print out bits in groups of 8
+	 * Goes through the bet set getting each bit and prints a 1 or a 0 then a new line at the end
+	 */
 	private static void printBitSet(BitSet set, int space)
 	{
 		int spacing = space;
@@ -704,7 +737,7 @@ public class DES_Skeleton {
 		SecureRandom random = new SecureRandom();  //Create RNG instance
 		
 		byte[] bytes = new byte[6];
-		random.nextBytes(bytes);//Get 8 Random bytes = 64 bits
+		random.nextBytes(bytes);
 		byte[] weak1 = {(byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01, (byte)0x01};
 		byte[] weak2 = {(byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE, (byte)0xFE};
 		byte[] weak3 = {(byte)0xE0, (byte)0xE0, (byte)0xE0, (byte)0xE0, (byte)0xF1, (byte)0xF1, (byte)0xF1, (byte)0xF1};
@@ -723,7 +756,7 @@ public class DES_Skeleton {
 		else
 		{
 			String key = Base64.getEncoder().encodeToString(bytes);//Encode the Key
-			System.out.println(key.format("%x", new BigInteger(1, key.getBytes())));
+			System.out.println(key.format("%x", new BigInteger(1, key.getBytes())));//print as hex
 		}
 		
 		return;
@@ -780,7 +813,8 @@ public class DES_Skeleton {
 	
 	private static void callUseage(int exitStatus) {
 		
-		String useage = "Improper command:  o i e d k h are supported options";
+		String useage = "Improper command: Supported options are\n -h\n -k\n -e key_Chain_File -i input_file -o output_file\n"
+				+ " -d key_Chain_File -i input_file -o output_file";
 		
 		System.err.println(useage);
 		System.exit(exitStatus);
