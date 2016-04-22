@@ -1,4 +1,8 @@
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Random;
 
 import gnu.getopt.Getopt;
@@ -16,7 +20,7 @@ public class RSA_skeleton {
 		StringBuilder encrypt = new StringBuilder();
 		
 		pcl(args, bitSizeStr, keyChainFile,m, encrypt);
-		
+		parseKey(keyChainFile, 1);
 //		You are going to have to pull out the numbers from key Chain File
 //		You can do this any way you want, this is just a suggested setup.
 		StringBuilder eStr = new StringBuilder();
@@ -29,17 +33,71 @@ public class RSA_skeleton {
 		}
 		
 		if(!eStr.toString().equalsIgnoreCase("")){
+			
 			RSAencrypt(m, nStr, eStr);
 		}
 		
 		if(!dStr.toString().equalsIgnoreCase("")){
+			
 			RSAdecrypt(m, nStr, dStr);
 		}
 		
 		
 	}
 
-
+	private static String parseKey (StringBuilder keyChainFile, int option)
+	{
+		String Skey = "";
+		String Pkey = " ";
+		String allLines = "";
+		try {
+			for(String input : Files.readAllLines(Paths.get(keyChainFile.toString()), Charset.defaultCharset()))
+			{
+				allLines += input;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		System.out.println(allLines);
+		
+		String[] strings = new String[8];
+		String owner = "";
+		strings = allLines.split(" ");
+		
+		for(int i = 0; i < strings.length; i++)
+		{
+			if(strings[i].contains("PRIVATE"))
+			{
+				owner = strings[i+1];
+				System.out.println(owner);
+				Skey = strings[i + 3];
+				Skey += strings[i + 4];//This is here because there seems to be a space in the middle of the keys
+									   //Not sure if thats how its supposed to be or not
+									   //There also doesnt seem to be a space at the end of one key before the next line starts
+									   //Not sure if our keyFile is incorrect or not, but its a very likely possibility
+				System.out.println(Skey);
+			}
+		}
+		
+		for(int i = 0; i < strings.length; i++)
+		{
+			if(strings[i].contains("PUBLIC") && strings[i + 1].contains(owner) && strings[i + 1].contains("RSA"))
+			{
+				Pkey = strings[i + 3];
+				Pkey += strings[i + 4];//This is here because there seems to be a space in the middle of the keys
+				System.out.println(Pkey);
+			}
+		}
+		
+		String output = "";
+		if(option == 1)
+			output = Skey;
+		else 
+			output = Pkey;
+		return output;
+	}
 
 	private static void RSAencrypt(StringBuilder m, StringBuilder nStr, StringBuilder eStr) {
 		//following the formula and using the values as big ints
