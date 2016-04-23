@@ -120,6 +120,7 @@ public class RSA_skeleton {
 		ciphertext.append(cipher.toString());
 		
 		m = ciphertext; 
+		System.out.println(m.toString(16)); 
 		
 	}
 
@@ -137,6 +138,7 @@ public class RSA_skeleton {
 		ciphertext.append(plaintext.toString());
 		
 		cStr = ciphertext; 
+		System.out.println(cStr.toString(16)); 
 	}
 	
 	private static void genRSAkey(StringBuilder bitSizeStr) {
