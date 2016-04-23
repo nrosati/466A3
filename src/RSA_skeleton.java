@@ -11,6 +11,9 @@ import gnu.getopt.Getopt;
 public class RSA_skeleton {
 	private static BigInteger privateKey;
    	private static BigInteger publicKey;
+   	private static String n;
+   	private static String d;
+   	private static String e; 
    	
 	public static void main(String[] args){
 		
@@ -23,9 +26,9 @@ public class RSA_skeleton {
 		parseKey(keyChainFile, 1);
 //		You are going to have to pull out the numbers from key Chain File
 //		You can do this any way you want, this is just a suggested setup.
-		StringBuilder eStr = new StringBuilder();
-		StringBuilder nStr = new StringBuilder();
-		StringBuilder dStr = new StringBuilder();
+		StringBuilder eStr = new StringBuilder(e);
+		StringBuilder nStr = new StringBuilder(n);
+		StringBuilder dStr = new StringBuilder(d);
 		
 		if(!bitSizeStr.toString().equalsIgnoreCase("")){
 			//This means you want to create a new key
@@ -71,13 +74,14 @@ public class RSA_skeleton {
 			if(strings[i].contains("PRIVATE"))
 			{
 				owner = strings[i+1];
-				System.out.println(owner);
+				//System.out.println(owner);
 				Skey = strings[i + 3];
+				n = strings[i + 3]; //saving the value of n for encryption
 				Skey += strings[i + 4];//This is here because there seems to be a space in the middle of the keys
-									   //Not sure if thats how its supposed to be or not
+				e = strings[i + 4];					   //Not sure if thats how its supposed to be or not
 									   //There also doesnt seem to be a space at the end of one key before the next line starts
 									   //Not sure if our keyFile is incorrect or not, but its a very likely possibility
-				System.out.println(Skey);
+				//System.out.println(Skey);
 			}
 		}
 		
@@ -86,8 +90,10 @@ public class RSA_skeleton {
 			if(strings[i].contains("PUBLIC") && strings[i + 1].contains(owner) && strings[i + 1].contains("RSA"))
 			{
 				Pkey = strings[i + 3];
+				n = strings[i + 3]
 				Pkey += strings[i + 4];//This is here because there seems to be a space in the middle of the keys
-				System.out.println(Pkey);
+				d = strings[i + 4];
+				//System.out.println(Pkey);
 			}
 		}
 		
