@@ -26,9 +26,9 @@ public class RSA_skeleton {
 		parseKey(keyChainFile, 1);
 //		You are going to have to pull out the numbers from key Chain File
 //		You can do this any way you want, this is just a suggested setup.
-		StringBuilder eStr = new StringBuilder();
-		StringBuilder nStr = new StringBuilder();
-		StringBuilder dStr = new StringBuilder();
+		StringBuilder eStr = new StringBuilder(e);
+		StringBuilder nStr = new StringBuilder(n);
+		StringBuilder dStr = new StringBuilder(d);
 		
 		if(!bitSizeStr.toString().equalsIgnoreCase("")){
 			//This means you want to create a new key
@@ -36,14 +36,12 @@ public class RSA_skeleton {
 		}
 		
 		if(!eStr.toString().equalsIgnoreCase("")){
-			eStr.append(e); 
-			nStr.append(n);
+
 			RSAencrypt(m, nStr, eStr);
 		}
 		
 		if(!dStr.toString().equalsIgnoreCase("")){
-			nStr.append(n);
-			dStr.append(d);
+
 			RSAdecrypt(m, nStr, dStr);
 		}
 		
@@ -65,7 +63,8 @@ public class RSA_skeleton {
 			e.printStackTrace();
 		}
 		
-		System.out.println(allLines);
+		//System.out.println(allLines);
+		if(allLines.equals("")) return "";
 		
 		String[] strings = new String[8];
 		String owner = "";
